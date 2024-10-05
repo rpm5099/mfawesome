@@ -1,0 +1,9 @@
+recursive-include src/mfawesome/data *.yaml
+recursive-include images *.*
+prune internal
+exclude .git
+exclude dist
+
+include LICENSE
+include README.md
+include MANIFEST.in

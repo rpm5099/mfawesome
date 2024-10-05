@@ -1,0 +1,187 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+# [tool.ruff]
+# lint.select = ["ALL"]
+# extend-include = [".ipynb"]
+
+# exclude = [
+#     #"internal",
+#     "env",
+#     ".bzr",
+#     ".direnv",
+#     ".eggs",
+#     ".git",
+#     ".git-rewrite",
+#     ".hg",
+#     ".ipynb_checkpoints",
+#     ".mypy_cache",
+#     ".nox",
+#     ".pants.d",
+#     ".pyenv",
+#     ".pytest_cache",
+#     ".pytype",
+#     ".ruff_cache",
+#     ".svn",
+#     ".tox",
+#     ".venv",
+#     ".vscode",
+#     "__pypackages__",
+#     "_build",
+#     "buck-out",
+#     "build",
+#     "dist",
+#     "node_modules",
+#     "site-packages",
+#     "venv",
+# ]
+
+# extend-exclude = ["/home/rob/gitrepos/mfawesome/internal", "TOTP.ipynb"]
+# line-length = 180
+
+# # Enable pycodestyle (`E`) and Pyflakes (`F`) codes by default.
+# #select = ["E", "F"]
+# lint.select = [
+#     "A",
+#     "B",
+#     "C",
+#     "D",
+#     "E",
+#     "F",
+#     "G",
+#     "I",
+#     "N",
+#     "Q",
+#     "S",
+#     "T",
+#     "W",
+#     "ANN",
+#     "ARG",
+#     "BLE",
+#     "COM",
+#     "DJ",
+#     "DTZ",
+#     "EM",
+#     "ERA",
+#     "EXE",
+#     "FBT",
+#     "ICN",
+#     "INP",
+#     "ISC",
+#     "NPY",
+#     "PD",
+#     "PGH",
+#     "PIE",
+#     "PL",
+#     "PT",
+#     "PTH",
+#     "PYI",
+#     "RET",
+#     "RSE",
+#     "RUF",
+#     "SIM",
+#     "SLF",
+#     "TCH",
+#     "TID",
+#     "UP",
+#     "YTT",
+# ]
+# lint.ignore = ["TRY"]
+
+# # Allow autofix for all enabled rules (when `--fix`) is provided.
+# lint.fixable = ["ALL"]
+# lint.unfixable = []
+# #fixable = [
+# #     "A",
+# #     "B",
+# #     "C",
+# #     "D",
+# #     "E",
+# #     "F",
+# #     "G",
+# #     "I",
+# #     "N",
+# #     "Q",
+# #     "S",
+# #     "T",
+# #     "W",
+# #     "ANN",
+# #     "ARG",
+# #     "BLE",
+# #     "COM",
+# #     "DJ",
+# #     "DTZ",
+# #     "EM",
+# #     "ERA",
+# #     "EXE",
+# #     "FBT",
+# #     "ICN",
+# #     "INP",
+# #     "ISC",
+# #     "NPY",
+# #     "PD",
+# #     "PGH",
+# #     "PIE",
+# #     "PL",
+# #     "PT",
+# #     "PTH",
+# #     "PYI",
+# #     "RET",
+# #     "RSE",
+# #     "RUF",
+# #     "SIM",
+# #     "SLF",
+# #     "TCH",
+# #     "TID",
+# #     "TRY",
+# #     "UP",
+# #     "YTT",
+# # ]
+
+
+# # Allow unused variables when underscore-prefixed.
+# lint.dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+
+# # Assume Python 3.11
+# target-version = "py311"
+
+# #[tool.ruff.mccabe]
+# lint.mccabe.max-complexity = 10
+
+# [tool.ruff.format]
+# # Like Black, use double quotes for strings.
+# quote-style = "double"
+
+# # Like Black, indent with spaces, rather than tabs.
+# indent-style = "space"
+
+# # Like Black, respect magic trailing commas.
+# skip-magic-trailing-comma = false
+
+# # Like Black, automatically detect the appropriate line ending.
+# line-ending = "auto"
+
+# # Enable auto-formatting of code examples in docstrings. Markdown,
+# # reStructuredText code/literal blocks and doctests are all supported.
+# #
+# # This is currently disabled by default, but it is planned for this
+# # to be opt-out in the future.
+# docstring-code-format = false
+
+# # Set the line length limit used when formatting code snippets in
+# # docstrings.
+# #
+# # This only has an effect when the `docstring-code-format` setting is
+# # enabled.
+# docstring-code-line-length = "dynamic"
+
+# # lint them but dont format
+# exclude = ["*.ipynb"]
+
+# #Format but dont link
+# # [tool.ruff]
+# # extend-include = ["*.ipynb"]
+
+# # [tool.ruff.lint]
+# # exclude = ["*.ipynb"]
