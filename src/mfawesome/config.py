@@ -484,9 +484,10 @@ class ConfigIO:
         if CheckSecretsEncrypted(self._rawconfig["secrets"]):
             self.secrets_encrypted_init = True
             self.secrets_encrypted = True
+        self.keylogprot = self._rawconfig.get("keylogprotection", False)
         if self.secrets_encrypted and self.decrypt is True:
             if self.ipassword is None:
-                self.ipassword = GetPassword(self.getpassmsgstr, verify=False, keylogprot=self._rawconfig.get("keylogprot", False))
+                self.ipassword = GetPassword(self.getpassmsgstr, verify=False, keylogprot=self.keylogprot)
             self.LoadConfig()
         else:
             self._config = self._rawconfig
