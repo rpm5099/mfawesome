@@ -5,10 +5,14 @@
 #   / /  / / __/ / ___ | |/ |/ /  __(__  ) /_/ / / / / / /  __/
 #  /_/  /_/_/   /_/  |_|__/|__/\___/____/\____/_/ /_/ /_/\___/
 
-__title__ = "mfawesome"
+__title__ = "MFAwesome"
 __description__ = "2FA CLI Authenticator Tool"
+__url__ = "https://github.com/rpm5099/mfawesome"
+__version__ = "0.1.0"
+__build_date__ = "2024-10-16"
 __author__ = "Rob Milloy"
 __author_email__ = "rob@milloy.net"
+
 __logo__ = r"""
 
      __  ____________                                             

@@ -74,7 +74,7 @@ stable version.
 
 - To install the latest development version:
 
-`git clone [git@gitlab.com:robpersonal1/mfawesome.git](https://github.com/rpm5099/mfawesome)`
+`git clone git@github.com:rpm5099/mfawesome.git`
 
 or...
 
