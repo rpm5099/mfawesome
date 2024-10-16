@@ -1,13 +1,11 @@
 
 <div align="center">
-    <h1><img src="images/lock_logo_3d_400.png"/></h1>
+    <h1><img src="https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/lock_logo_3d_400.png?raw=true"/></h1>
 </div>
 
-![image](images/mfa_word_logo.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/mfa_word_logo.png?raw=true)
 
 # **MFAwesome: CLI Multi Factor Authenticaton**
-
-[[_TOC_]]
 
 
 # Summary
@@ -25,7 +23,7 @@ Due to the large size of the dependencies required for python's [qreader](https:
 
 # Preview
 
-![image](images/run_cont.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/run_cont.png?raw=true)
 
 # Requirements
 
@@ -202,10 +200,10 @@ There are five `mfa` subcommands some of which in turn have additional subcomman
 | :exclamation:  WARNING |
 | ---------------------- |
 Showing secrets will subject the to viewing by others as well as terminal output logging. A warning is issued if the config option `keylogprotection: true` is set.
-![image](images/run_show_secrets.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/run_show_secrets.png?raw=true)
 
 `mfa -c`: Run and display codes for 90s (or whatever is specified as timeout)
-![image](images/run_cont.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/run_cont.png?raw=true)
 
 ```
 $mfa run -h
@@ -288,23 +286,23 @@ mfa secrets commands:
 
 `mfa config encrypt`
 
-![image](images/encrypt.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/encrypt.png?raw=true)
 
 `mfa config decrypt`
 
-![image](images/decrypt.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/decrypt.png?raw=true)
 
 `mfa config print`
 
-![image](images/config_print.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/config_print.png?raw=true)
 
 `mfa config debug`
 
-![image](images/config_debug.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/config_debug.png?raw=true)
 
 `mfa hotp`
 
-![image](images/hotp.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/hotp.png?raw=true)
 
 | :exclamation:  WARNING |
 | ---------------------- |
@@ -312,7 +310,7 @@ Running in debug mode can output sensitive information to the terminal and could
 
 `mfa secrets search`
 
-![image](images/search_secrets.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/search_secrets.png?raw=true)
 
 -   `--addqrsecrets TEXT`: The required term is the name of the directory containing screenshots/images of QR images from Google Authenticator (or other source) you wish to import to your config
 
@@ -320,9 +318,9 @@ Running in debug mode can output sensitive information to the terminal and could
 | ---------------------- |
 ***MFAwesome makes every attempt to ensure that your secrets are cleared from the screen following execution unless you have explicitly enabled \'\--noclearscreen/-l\', including on keyboard interrupt (SIGINT signal). However, Ctrl+Z (SIGTSTP signal) will stop the processs without leaving python a chance to clear output.***
 
-![image](images/keyboard_interrupt.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/keyboard_interrupt.png?raw=true)
 
-![image](images/finished_codes.png)
+![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/finished_codes.png?raw=true)
 
 # Running From a Jupyter Notebook
 
