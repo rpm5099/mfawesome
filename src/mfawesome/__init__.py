@@ -6,10 +6,7 @@
 #  /_/  /_/_/   /_/  |_|__/|__/\___/____/\____/_/ /_/ /_/\___/
 
 __title__ = "mfawesome"
-__description__ = "2FA Authenticator Tool"
-__url__ = "https://gitlab.com/robpersonal1/mfawesome"
-__version__ = "0.0.32"
-__build_date__ = "2024-10-14"
+__description__ = "2FA CLI Authenticator Tool"
 __author__ = "Rob Milloy"
 __author_email__ = "rob@milloy.net"
 __logo__ = r"""
