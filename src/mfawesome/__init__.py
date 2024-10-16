@@ -8,7 +8,7 @@
 __title__ = "MFAwesome"
 __description__ = "2FA CLI Authenticator Tool"
 __url__ = "https://github.com/rpm5099/mfawesome"
-__version__ = "0.1.2"
+__version__ = "0.1.3"
 __build_date__ = "2024-10-16"
 __author__ = "Rob Milloy"
 __author_email__ = "rob@milloy.net"
