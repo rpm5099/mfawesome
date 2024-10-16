@@ -1,36 +1,31 @@
-```
-     __  ____________                                             
-    /  |/  / ____/   |_      _____  _________  ____ ___  ___      
-   / /|_/ / /_  / /| | | /| / / _ \/ ___/ __ \/ __ `__ \/ _ \     
-  / /  / / __/ / ___ | |/ |/ /  __(__  ) /_/ / / / / / /  __/     
- /_/  /_/_/   /_/  |_|__/|__/\___/____/\____/_/ /_/ /_/\___/      
-```
 
-[[_TOC_]]
+<div align="center">
+    <h1><img src="images/lock_logo_3d_400.png"/></h1>
+</div>
+
+![image](images/mfa_word_logo.png)
 
 # **MFAwesome: CLI Multi Factor Authenticaton**
 
+[[_TOC_]]
+
+
 # Summary
 
-**MFAwesome** is an open-source system cross-platform command line based
-multifactor authentication tool. It allows secure storage of your TOTP
-and HOTP secrets in a simple config file that can be exported for use
-even on systems you do not trust. It allows importing secrets via Google
-Authenticator QR codes (requires
-[QRScan](https://github.com/sayanarijit/qrscan)), keylogger protection,
-fuzzy matching on secret names, multiple encryption options and
-automatic synchronization via public NTP servers (custom NTP sever can
-be set in the config). It is faster and easier for those accustomed to
-CLI than using an app on your phone.
+**MFAwesome** (MFA) is an open-source system cross-platform command line based multifactor authentication tool. It allows secure storage of your TOTP and HOTP secrets in a simple config file that can be exported for use even on systems you do not trust. It allows importing secrets via Google Authenticator QR codes.
 
-The bottom line is this: if your second method of authentication for
-your accounts is on available on your phone - including email, text,
-phone call or app - if your phone is not in your possession then you
-might as well not have 2FA at all.
+MFA provides keylogger protection, fuzzy matching on secret names, multiple encryption options and automatic synchronization via public NTP servers (custom NTP sever can be set in the config). It is faster and easier for those accustomed to CLI than using an app on your phone. 
+
+The bottom line is this: if both of your two factor authentication methods are available on your mobile device the second factor provides no security against an attacker with access to it.  
+
+
+| :zap:  NOTE |
+| ----------- |
+Due to the large size of the dependencies required for python's [qreader](https://pypi.org/project/qreader/) package it is only installed by specifying  `pip install mfawesome[all]`. However without `qreader` you will not be able to import secrets via qrcodes.
 
 # Preview
 
-![image](images/continuous_show_secrets.png)
+![image](images/run_cont.png)
 
 # Requirements
 
@@ -38,33 +33,23 @@ Python:
 
 `python>=3.11`
 
-Python Libraries:
+Python Libraries (`pip install mfawesome`:
 
--   `rich` (CLI Display output)
--   `pyyaml` (Config/Secrets storage)
--   `cryptography` (Secrets encryption)
--   `click` (CLI Arguments)
+- `rich` (CLI Display output)
+- `pyyaml` (Config/Secrets storage)
+- `cryptography` (Secrets encryption)
+- `numpy` (math)
+- `protobuf` (Google Authenticator QR Generation)
+- `opencv-python` (Google Authenticator QR Generation)
+- `qrcode[pil]` (QR Code Generation)
 
-Optional dependencies:
+`pip install mfawesome[all]` Optional dependencies:
 
--   `protobuf` (Importing from Google Authenticator)
--   `requests` (verifying internet connectivity)
--   `icmplib` (verifying internet connectivity)
--   `dnspython` (verifying internet connectivity)
-
-External Dependencies:
-
-QRCodes:
-
--   [QRScan](https://github.com/sayanarijit/qrscan) (for scanning QR
-    images)
+- `qreader` (QR Code Import)  *Note: This package has a large amount of dependencies*
 
 | :zap:  NOTE |
 | ----------- |
-
-*It has recently come to our attention that certain QR
-codes, such as those used by Paypal do not scan correctly using this
-app. This will be fixed in a future update.*
+On Linux `libzbar0` is required to read QR codes - `sudo apt install libzbar0` or `sudo dnf install libzbar0`.  On Windows you may need to install [vcredist_x64.exe](https://www.microsoft.com/en-gb/download/details.aspx?id=40784).  See the [QReader homepage](https://github.com/Eric-Canas/qreader) for details.
 
 # Installation
 
@@ -75,28 +60,25 @@ There are several methods to test/install MFAwesome on your system.
 MFAwesome is on `PyPI`. By using PyPI, you will be using the latest
 stable version.
 
--   To install MFAwesome, simply use `pip`:
+- To install MFAwesome, simply use `pip`:
 
 `pip install --user mfawesome`
 
--   For a full installation (with all features):
-
-*Note: You will need to install the Rust package \`\`QRScan\`\` in order
-to utilize this feature*
+- For a full installation (with all features):
 
 `pip install --user mfawesome[all]`
 
--   To upgrade MFAwesome to the latest version:
+- To upgrade MFAwesome to the latest version:
 
 `pip install --user --upgrade mfawesome`
 
--   To install the latest development version:
+- To install the latest development version:
 
-`git clone git@gitlab.com:robpersonal1/mfawesome.git`
+`git clone [git@gitlab.com:robpersonal1/mfawesome.git](https://github.com/rpm5099/mfawesome)`
 
 or...
 
-`git clone https://gitlab.com/robpersonal1/mfawesome.git`
+`git clone https://github.com/rpm5099/mfawesome.git`
 
 then ...
 
@@ -106,40 +88,31 @@ then ...
 
 # Config File
 
-The config file is normally named "mfawesome.conf" (unless specifying
-via environment variable) and is formatted in
-[YAML](https://yaml.org/spec/1.2.2/). It's location is checked for in
-the following resolution order:
+The config file is named `mfawesome.conf` by default.  This can be changed by specifying via environment variable.  It is formatted in [YAML](https://yaml.org/spec/1.2.2/).  It's location is checked for in the following resolution order which can be checked using `mfa --configdebug`:
 
-1.  MFAWESOME_CONFIG environment variable (full file name with path)
-2.  Local directory for mfawesome.conf
-3.  \~/mfawesome.conf (profile home)
-4.  \~/.config/mfawesome/mfawesome.conf
+1. MFAWESOME_CONFIG environment variable (full file name with path)
+2. Local directory for mfawesome.conf
+3. `~/mfawesome.conf` (profile home)
+4. `~/.config/mfawesome/mfawesome.conf` (default location)
+5. Provided as a command line argument using `mfa --configfile`
 
-**ALL** secrets are entered in the config file, either manually while it
-is not encrypted or via the command line using `--addqrsecrets` and
-`--addsecrets` (removal via `--removesecret`). Other metadata is fine to
-enter in the yaml config file and will be encrypted along with the
-secrets. The only *required* sections in the config file is `secrets`.
+**ALL** secrets are entered in the config file, either manually while it is not encrypted or via the command line using `mfa secrets add` and `mfa secrets import` (removal via `mfa secrets remove`). Other metadata is fine to enter in the yaml config file and will be encrypted along with the secrets. The only *required* section in the config file is `secrets`.
 
-`--addsecrets` takes a single parameter which must be in the form of
-json/python dictionary, i.e.:
+`mfa secrets add` takes a single parameter which must be in the form of json/python dictionary, i.e.:
 
 `{"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}`
 
-The active config file in use can be located via `--configdebug`
-(similar to `pip config debug`). The option `--exportconfig` can be used
-to export the existing secrets in the config file.
+The active config file in use can be located via `mfa config debug` (similar to `pip config debug`). The option `mfa secrets export` can be used to export the existing secrets in the config file in QR code format.
 
-The option `--printconfig` can be used to \[decrypt\] and display the
-full config file (*subjecting it to command line output logging*).
+The option `mfa config print` can be used to \[decrypt\] and display the full config file (*subjecting it to command line output logging*).
 
-A double underscore - `__disabled_secret` in the `secrets` section of
-the config will disable the TOTP/HOTP calculation for that secret.
+A double underscore - `__disabled_secret` in the `secrets` section of the config will disable the TOTP/HOTP calculation for that secret.
 
 # NTP Time Servers
 
-A list of time servers to use can be specified either via the `NTP_SERVERS` environment variable or within the config file.
+A list of time servers to use can be specified either via the `NTP_SERVERS` environment variable or within the config file under the root as `timeserver` (see config options below).
+
+:zap: Having the correct time is essential to ensuring that the 2FA codes provided are correct.  Most of the time they operate on 30 second intervals, so even a small difference in time between MFA and the authentication server is problematic.
 
 # Environment Variables
 
@@ -147,13 +120,13 @@ All environment variables take precedence over the config file, but not over man
 
 ## MFAWESOME_CONFIG
 
-The environment variable `MFAWESOME_CONFIG`, if set, will be used as the path to the config file.  If the file does not exist or is invalid and exception will be raised
+The environment variable `MFAWESOME_CONFIG`, if set, will be used as the path to the config file.  If the file does not exist or is invalid an exception will be raised.
 
 ## MFAWESOME_PWD
 
 The environment variable `MFAWESOME_PWD`, if set, will be used as the password to decrypt secrets.  An attempt to decrypt or export secrets will still request that the password be entered for validation.
 
-:zap:  ***NOTE:*** *It is recommended to only store your password this way on machines that you trust.  nvironment variables can be logged.*
+:zap:  ***NOTE:*** *It is recommended to only store your password this way on machines that you trust.  Environment variables can be logged.*
 
 ## MFAWESOME_LOGLEVEL
 
@@ -161,7 +134,7 @@ If set `MFAWESOME_LOGLEVEL` will override the setting in the config file, but no
 
 ## NTP_SERVERS
 
-The environment variable `NTP_SERVERS` can be specified as a colon `:` separated list of NTP time servers.  If none exist MFAwesome will fall back to the local system time, which if incorrect, will cause time based codes to be incorrect.  A warning will be displayed if this is the case.
+The environment variable `NTP_SERVERS` can be specified as a colon `:` separated list of NTP time servers.  If none of the specified NTP servers can be contacted MFAwesome will fall back to the local system time, which if incorrect, _will cause time based codes to be incorrect._  A warning will be displayed if this is the case.
 
 ## MFAWESOME_TEST
 
@@ -185,9 +158,9 @@ calculate a hash and (B) computationally and/or memory expensive
 state-of-the-art as of 2024. The following settings are used for Scrypt
 password hashing:
 
--   CPU cost: 2\*\*14
--   Blocksize: 8
--   Parallelization: 1
+- CPU cost: 2\*\*14
+- Blocksize: 8
+- Parallelization: 1
 
 Salt, Chacha \"add\" and Chacha \"nonce\" are generated using
 `os.urandom()`.
@@ -196,16 +169,11 @@ Salt, Chacha \"add\" and Chacha \"nonce\" are generated using
 
 **keylogprotection**
 
-Setting this option to [true]{.title-ref} will display a randomized set
-of characters each time it is used that are used to enter your password,
-ensuring that keystroke loggers record only random characters, rather
-than your password. This option is set by default when using
-`--exportconfig`.
+Setting this option to [true]{.title-ref} will display a randomized set of characters each time it is used that are used to enter your password, ensuring that keystroke loggers record only random characters, rather than your password. This option is set by default when using `mfa config export`.  Note that `mfa config export` is for exporting the entire config file and `mfa secrets export` is for exporting specific secrets in QR code format.
 
 **loglevel**
 
-At the root level of the config file loglevel can be entered as either
-an integer or ascii value:
+At the root level of the config file loglevel can be entered as either an integer or ascii value using `-L` (*Note: ASCII log levels are not case sensitive*):
 
 | ASCII Log Level | Integer Log Level |
 | :-------------- | ----------------: |
@@ -219,185 +187,153 @@ an integer or ascii value:
 
 **timeserver**
 
-If you would like to force MFAwesome to use a specific time server
-include it under the [timeserver]{.title-ref} field in the root of the
-config. Otherwise a saved list of known publicly available timeservers
-will be used. The use of a timerserver ensures that the program has
-accurate time for calculating time based authentication codes.
+If you would like to force MFAwesome to use a specific time server include it under the [timeserver]{.title-ref} field in the root of the config. Otherwise a saved list of known publicly available timeservers will be used. The use of a timerserver ensures that the program has accurate time for calculating time based authentication codes.
 
 # Command Line Options
 
-MFAwesome is executed by running `mfa` at command line. By default it
-runs in TOTP mode and only displays time based authentication codes, but
-using the option `--hotp` will show hotp instead. To print out all
-secrets the best option is `--printconfig`, especially if you have
-secrets you\'d like to view that do not have an OTP associatd with them.
+MFAwesome is executed by running `mfa` at command line. There are three optional arguments that apply to any `mfa` command, and they must be specified immediatly following `mfa`.  `--configfile` is used to override the default config and the `MFAWESOME_CONFIG` to use a specific config file for that execution only.  `-L` is used to set the log level.  `-T` is for test mode - *do not use as it could potentially expose secrets.*  
 
-![image](images/running_no_secrets.png)
+## Sub-Commands
 
--   `filterterm`: this is the only positional argument and is used to
-    filter using fuzzy matching (unless `--exact` is specified) against
-    secretnames. However when using `--searchsecrets` it will match
-    against text anywhere in the secret.
--   `--encryptsecrets`: encrypts your current config file in place
+There are five `mfa` subcommands some of which in turn have additional subcommands.  To reduce the keystrokes to display secrets the `run` subcommand is assumed if the first term after `mfa` is not one of the five subcommands. For example `mfa banksecret` is equivalent to running `mfa run banksecret`.  Similarly running that same command while specifying a config file and exact secrets matching would be `mfa --configfile someconfig.conf -e banksecrets` and `mfa --configfile someconfig.conf run -e banksecrets` respectively.  Note that the `-e` is actually an argument to `run`, and must be specified immediately following it.
 
-![image](images/encrypting_secrets.png)
-
--   `--decryptsecrets`: decrypts your current config file in place
--   `--exportconfig`: creates a copy of your current config file with a
-    new password and saves it in the current working directory (*Note:
-    enables keylogprotection by default. This can always be disabled in
-    the config file if desired*)
-
-![image](images/decryptingsecrets.png)
-
--   `--printconfig`: prints your \[decrypted\] config and exits
-
-![image](images/show_config.png)
-
--   `--configdebug`: displays the config file resolution order and
-    selected config file, similar to `pip config debug`
-
-![image](images/configdebug.png)
-
--   `-c, --continuous`: displays all secrets continuously for 120
-    seconds, or the time specified in `--timeout` starting immediately.
-    When the secrets get renewed if this timer is less than the time
-    left on the secrets (30s), the timer will be set to match the
-    secrets expiration to avoid killing the session on secrets that have
-    not expired.
-
-![image](images/continuous_show_secrets.png)
-
-![image](images/expiring_continuous.png)
-
--   `-e, --exact`: matches \[the only optional positional argument\]
-    `filterterm` against secret names exactly rather than using fuzzy
-    matching
--   `-s, --showsecrets`: shows the secret metadata stored in the config
-    file along with the ephemeral code (*use with caution*)
+`mfa -s` will show protected information about the secret including the raw TOTP code and password is stored.
 
 | :exclamation:  WARNING |
 | ---------------------- |
+Showing secrets will subject the to viewing by others as well as terminal output logging. A warning is issued if the config option `keylogprotection: true` is set.
+![image](images/run_show_secrets.png)
 
-Showing secrets will subject the to viewing by others as well as
-terminal output logging. A warning is issued if the config option
-`keylogprotection: true` is set.
-:::
+`mfa -c`: Run and display codes for 90s (or whatever is specified as timeout)
+![image](images/run_cont.png)
 
--   `-t, --noendtimer`: shows the current value of the calculated code
-    and immediately exits
--   `-l, --noclearscreen`: disables clearing of the screen once secrets
-    or continuous session is expired. (*use with caution in conjuntion
-    with \`\`\--showsecrets\`\`*)
+```
+$mfa run -h
+usage: MFAwesome run [-h] [-c] [-e] [-s] [-l] [-n] [-E] [-t TIMELIMIT] [-N] [filterterm]
 
-![image](images/expired_secrets_still_showing.png)
+positional arguments:
+  filterterm            Optional term to filter displayed secrets
 
--   `-n, --now`: rather than waiting for new codes with enough time on
-    them to be able to enter them, show the calculated code values
-    immediately
--   `-r, --showerr`: show the short description/reason for any errors
-    for codes in your config secrets
--   `--timeout`: was for ntpserver but i think i'm going to remove
--   `--loglevel`: string or integer: disabled (0), debug (10), info
-    (20), warn (30), error (40), critical (50). The default value is
-    info
--   `--hotp`: takes optional `filterterm` parameter and shows matching
-    HOTP secrets. `--exact` is allowed
+options:
+  -h, --help            show this help message and exit
+  -c, --continuous      Enable continuous code display - default to 90 but add optional argument for otherwise
+  -e, --exact           Disable fuzzy matching on secret filterterm
+  -s, --showsecrets     Enable showing secrets - WARNING: this will reveal sensitive information on your screen
+  -l, --noclearscreen   Disable clearing the screen before exit - WARNING - can leave sensitive data on the screen
+  -n, --now             Get codes now even if they expire very soon. N/A for continuous.
+  -E, --showerr         Show errors getting and parsing codes
+  -t TIMELIMIT, --timelimit TIMELIMIT
+                        Length of time to show codes continuously (Default 90.0 seconds)
+  -N, --noendtimer      Disable countdown timer for codes, N/A for --continuous
+```
 
-![image](images/hotp_secret.png)
+- `hotp`: Same as run, except for HOTP codes.  Counters are automatically incremented when the HOTP codes are displayed.  They can be modified in the config file manually if necessary.
+
+```
+$mfa hotp -h
+usage: MFAwesome hotp [-h] [-c] [-e] [-s] [filterterm]
+
+positional arguments:
+  filterterm         Optional term to filter displayed secrets
+
+options:
+  -h, --help         show this help message and exit
+  -c, --continuous   Enable continuous code display - default to 90 but add optional argument for otherwise
+  -e, --exact        Disable fuzzy matching on secret filterterm
+  -s, --showsecrets  Enable showing secrets - WARNING: this will reveal sensitive information on your screen
+```
+
+- `config`: Commands related to config file management
+
+```
+$mfa config -h
+usage: MFAwesome config [-h] <debug encrypt decrypt password print generate> ...
+
+options:
+  -h, --help            show this help message and exit
+
+mfa config commands:
+  <debug encrypt decrypt password print generate>
+                        Config file operations
+    generate            Generate a new config file in the default location '$HOME/.config/mfawesome/mfawesome.conf'
+    encrypt             Encrypt secrets in config file (if not already encrypted)
+    decrypt             Permanently decrypt secrets in config file (if encrypted)
+    export              Export config to the specified file (required). Keylog protection will be enabled. Please see the documentation for details
+    print               Print entire unencrypted config and exit
+    debug               Show config file resolution details
+    password            Change password for secrets - unencrypted secrets are never written to disk
+```
+
+- `secrets`: Commands related to managing secrets.
+
+```
+$mfa secrets -h
+usage: MFAwesome secrets [-h] <search generate remove export import qread> ...
+
+options:
+  -h, --help            show this help message and exit
+
+mfa secrets commands:
+  <search generate remove export import qread>
+                        Secrets operations
+    search              Search through all secrets for a filtertem and display matching.
+    generate            Generate and print an OTP secret key
+    remove              Remove a secret by specifying the secret name
+    export              Export codes in QR images to be scanned by Google Authenticator
+    import              Import codes from QR images
+    add                 Add new secret(s), must be in dict json format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}. Multiple secrets are acceptable
+    qread               Read QR image and output the raw data
+```
+
+
+`mfa config encrypt`
+
+![image](images/encrypt.png)
+
+`mfa config decrypt`
+
+![image](images/decrypt.png)
+
+`mfa config print`
+
+![image](images/config_print.png)
+
+`mfa config debug`
+
+![image](images/config_debug.png)
+
+`mfa hotp`
+
+![image](images/hotp.png)
 
 | :exclamation:  WARNING |
 | ---------------------- |
+Running in debug mode can output sensitive information to the terminal and could potentially be logged. A warning is issued if the config option `keylogprotection: true` is set.
 
-Running in debug mode can output sensitive information to the terminal
-and could potentially be logged. A warning is issued if the config
-option `keylogprotection: true` is set.
+`mfa secrets search`
 
--   `--generatesecret`: generate a valid OTP secret value and print it
-    out to the screen (note that this does not get added to the config
-    or saved anywhere)
--   `-z, -searchsecrets`: search through *all* secrets in your config
-    using a required [filterterm]{.title-ref} and show you the results.
-    This does not calculate and display TOTP or HOTP codes. If the
-    [\--exact]{.title-ref} flag is set fuzzy matching will be disabled.
+![image](images/search_secrets.png)
 
-![image](images/search_all_secrets.png)
-
--   `--addqrsecrets TEXT`: this option requires the third party Rust
-    libarary \[QRScan\](<https://github.com/sayanarijit/qrscan>) to be
-    installed. The required term is the name of the directory containing
-    screenshots/images of QR images from Google Authenticator you wish
-    to import to your config
+-   `--addqrsecrets TEXT`: The required term is the name of the directory containing screenshots/images of QR images from Google Authenticator (or other source) you wish to import to your config
 
 | :exclamation:  WARNING |
 | ---------------------- |
-
-**\*MFAwesome makes every attempt to ensure that your secrets are
-cleared from the screen following execution unless you have explicitly
-enabled \'\--noclearscreen/-l\', including on keyboard interrupt (SIGINT
-signal). However, Ctrl+Z (SIGTSTP signal) will stop the processs without
-leaving python a chance to clear output.**\*
-:::
+***MFAwesome makes every attempt to ensure that your secrets are cleared from the screen following execution unless you have explicitly enabled \'\--noclearscreen/-l\', including on keyboard interrupt (SIGINT signal). However, Ctrl+Z (SIGTSTP signal) will stop the processs without leaving python a chance to clear output.***
 
 ![image](images/keyboard_interrupt.png)
 
 ![image](images/finished_codes.png)
 
-# Help Output
-
-    $mfa --help
-    Usage: mfa [OPTIONS] [FILTERTERM]
-
-    Options:
-    --encryptsecrets     Encrypt secrets in config file (if not already
-                         encrypted)
-    --decryptsecrets     Permanently decrypt secrets in config file (if
-                         encrypted)
-    --exportconfig       Export config to current directory.  Strong hashing and
-                         keylog protection will be enabled.  Please see the
-                         documentation for details
-    --changepassword     Change password for secrets - unencrypted secrets are
-                         never written to disk
-    --generateconfig     Generate a new config file if one does not exit - add
-                         your secrets there
-    --printconfig
-    -z, --searchsecrets  Search through all secrets for a filterterm and display
-                         matching.  '--exact' flag is applicable
-    --addsecrets TEXT    Add new secret(s), must be in format of {"secretname":
-                         {"totp":"SECRETCODE", "user":"theduke",
-                         "url":"www.example.com"}}.  Multiple secrets are
-                         acceptable
-    --removesecret TEXT  Remove a secret by specifying the secret name
-    --addqrsecrets TEXT  Add secrets from QR images by specifying directory
-                         containing the images
-    --generatesecret     Generate and print a secret key and exit
-    -c, --continuous     Enable continuous code display - default to 90 but add
-                         optional argument for otherwise
-    -e, --exact          Disable fuzzy matching on secret filterterm
-    -s, --showsecrets    Enable showing secrets - WARNING: this will reveal
-                         sensitive information on your screen
-    -t, --noendtimer     Disable countdown timer for codes, N/A for --continuous
-    -l, --noclearscreen  Disable clearing the screen before exit - WARNING - can
-                         leave sensitive data on the screen
-    -n, --now            Get codes now even if they expire very soon.  N/A for
-                         continuous.
-    -r, --showerr        Show errors getting codes
-    --timeout FLOAT      Length of time to show codes continuously (seconds)
-    --loglevel INTEGER   Integer log level 0, 10, 20, 30, 40, 50
-    --configdebug        Show config file resolution details
-    --hotp               Calculate HOTP codes, using a filterterm if supplied.
-                         Counters will be incremented in the config
-    --help               Show this message and exit.
-
-![image](images/help.png)
-
 # Running From a Jupyter Notebook
 
 ``` python
-from mfawesome.exec_mfawesome import run
-run(now=True)
+from mfawesome import mfa
+mfa("run")
+mfa("secrets export /tmp/mfa")
 ```
+| :iphone: Mobile Import |
+| ----------- |
+`secrets export` run in Jupyter will display the QR images to scan for import into your mobile device
 
 # License
 

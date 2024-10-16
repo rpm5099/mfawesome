@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import base64
+import copy
 import logging
 import os
 import random
 import shutil
+import traceback
 import urllib
-from contextlib import suppress
-from pathlib import Path
+from contextlib import contextmanager, redirect_stderr, redirect_stdout, suppress
 from typing import TYPE_CHECKING, NamedTuple
 
 import cv2
@@ -15,6 +16,7 @@ import qrcode
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool, symbol_database
 from google.protobuf.internal import builder as _builder
+from rich import print as rprint
 
 from mfawesome.exception import DependencyMissingError, ExternalDependencyError, Invalid2FACodeError, MFAwesomeError, QRScanError
 from mfawesome.utils import (
@@ -25,6 +27,8 @@ from mfawesome.utils import (
     PercentDecode,
     RunOnlyOnce,
     b32decode,
+    check_yes_no,
+    colors,
     colorstring,
     filenametimestamp,
     makestr,
@@ -38,6 +42,8 @@ from mfawesome.utils import (
 )
 
 if TYPE_CHECKING:
+    from pathlib import Path
+
     import google
 
 with suppress(ImportError, ModuleNotFoundError):
@@ -50,6 +56,13 @@ if IsIPython():
 logger = logging.getLogger("mfa")
 
 MAXQRSIZE = 0x91B
+
+
+@contextmanager
+def suppress_stderr():
+    """A context manager that redirects stdout and stderr to devnull"""
+    with open(os.devnull, "w") as fnull, redirect_stderr(fnull) as err:
+        yield err
 
 
 # https://github.com/digitalduke/otpauth-migration-decoder/blob/master/src/decoder.py
@@ -177,7 +190,9 @@ def ParseQRUrl(otpauth_migration_url: str, nodecode: bool = False) -> list:
     return results
 
 
+@suppress_stderr()
 def ScanQRImage(filename: str | Path) -> tuple:
+    filename = PathEx(filename)
     try:
         image = cv2.cvtColor(cv2.imread(str(filename)), cv2.COLOR_BGR2RGB)
         qreader = QReader()
@@ -188,7 +203,34 @@ def ScanQRImage(filename: str | Path) -> tuple:
     return qrdata
 
 
+@suppress_stderr()
+def RawQRRead(filename: str | Path) -> list:
+    filename = str(PathEx(filename))
+    img = cv2.cvtColor(cv2.imread(filename), cv2.COLOR_BGR2RGB)
+    qreader = QReader()
+    return qreader.detect_and_decode(image=img)
+
+
+def DisplayRawQR(filename: str | Path) -> None:
+    try:
+        qrdata = RawQRRead(filename)
+        for entry in qrdata:
+            try:
+                rprint(ParseQRUrl(entry, nodecode=False))
+            except KeyError as e:
+                logger.debug(f"QRRead exception: {e!r}")
+                try:
+                    rprint(ParseQRUrl(entry, nodecode=True))
+                except Exception as e1:
+                    logger.debug(f"QRRead exception: {e1!r}")
+    except Exception as e2:
+        printerr(f"Failed to read QR image: {filename!s}")
+        if logger.level == 10:
+            traceback.print_exception(e2)
+
+
 def ScanQRDir(qrdir: str | Path) -> dict:
+    filenames = []
     image_extensions = [".jpeg", ".jpg", ".png", ".gif", ".tiff", ".bmp", ".raw", ".emf"]
     qrdir = PathEx(qrdir)
     if qrdir.is_file():
@@ -201,6 +243,7 @@ def ScanQRDir(qrdir: str | Path) -> dict:
         raise MFAwesomeError(f"No valid image file extensions found in {qrdir}")
     otpauths = []
     otpnames = []
+    qrtexts = []
     for filename in filenames:
         try:
             qrurls = ScanQRImage(filename=filename)  # returns a tuple in case there is more than one QR code detected in the image
@@ -211,7 +254,7 @@ def ScanQRDir(qrdir: str | Path) -> dict:
         if not qrurls:
             continue
         logger.debug(f"{filename=}  {qrurls=}")
-        qrtexts = []
+
         for qrurl in qrurls:
             try:
                 qrtextl = ParseQRUrl(qrurl)
@@ -223,7 +266,6 @@ def ScanQRDir(qrdir: str | Path) -> dict:
             qrtexts.extend(qrtextl)
     qrtexts.sort(key=lambda x: x.name)
     for qrtext in qrtexts:
-        logger.critical(f"{otpnames=}")
         gname = IncrementToDeconflict(qrtext.name, otpnames)
         if qrtext.name in otpnames:
             printwarn(f"Warning: Duplicate secret name {qrtext.name}, renaming to {gname}")
@@ -234,7 +276,7 @@ def ScanQRDir(qrdir: str | Path) -> dict:
     return otpauths
 
 
-def ExportToGoogleAuthenticator(secrets: dict, exportdir: str | Path | None = None) -> list[str]:
+def QRExport(secrets: dict, exportdir: str | Path | None = None, max_secrets_per_qr: int = 5) -> list[str]:
     exportdir = exportdir if exportdir else PathEx(".")
     exportdir = PathEx(exportdir)
     if exportdir.is_file():
@@ -251,6 +293,7 @@ def ExportToGoogleAuthenticator(secrets: dict, exportdir: str | Path | None = No
     otpdigits = {None: _GOAMO.DIGIT_COUNT_SIX, 6: _GOAMO.DIGIT_COUNT_SIX, 8: _GOAMO.DIGIT_COUNT_EIGHT}
     otptypes = {"hotp": _GOAMO.OTP_TYPE_HOTP, "totp": _GOAMO.OTP_TYPE_TOTP}
     exportable = []
+    skipped = []
     for secretname, data in secrets.items():
         datakeys = {x.casefold() for x in data if isinstance(x, str)}
         if "hotp" in datakeys:
@@ -294,6 +337,10 @@ def ExportToGoogleAuthenticator(secrets: dict, exportdir: str | Path | None = No
             )
             exportable.append(authsecret)
             printok(f"Exporting TOTP secret '{secretname}'...")
+        else:
+            skipped.append(secretname)
+    if skipped:
+        printwarn(f"{len(skipped)} non-OTP secrets were skipped: {skipped}")
     GOAMO = Init_Otpauth_Migration()
     goamos = []
     for i, export in enumerate(exportable):
@@ -309,7 +356,7 @@ def ExportToGoogleAuthenticator(secrets: dict, exportdir: str | Path | None = No
             exsecret.counter = export.counter
         # exsecret.period = export.period - google authenticator does not allow this field
         GOAMO.otp_parameters.append(exsecret)
-        if i > 0 and i % 10 == 0:
+        if i > 0 and i % max_secrets_per_qr == 0:
             goamos.append(GOAMO)
             GOAMO = Init_Otpauth_Migration()
     if len(GOAMO.otp_parameters) > 0:
@@ -334,30 +381,21 @@ def ExportToGoogleAuthenticator(secrets: dict, exportdir: str | Path | None = No
         qrimg.save(fout)
         if IsIPython():
             import IPython
+            from IPython.core.display import HTML, display
 
-            # IPython.embed_kernel()
-            printcrit("DISPLAYING QR IMAGES EXPORT")
-            printok(f"MFAWESOME SECRETS EXPORT {i}")
-            display(HTML(qrimg))
+            printok(f"MFAWESOME SECRETS EXPORT {i}:")
+            display(qrimg.get_image())
     for qri in qrfiles:
         qri.chmod(0o600)
     print_with_sep_line(printok, f"Total of {len(exportable)} Secret(s) exported to {exportdir.resolve()!s}:", color="bold_green", above=True)
     for fn in qrfiles:
         tab = "\t"
         printok(f"{tab}{fn!s}")
-
-    # if IsIpython():
-    #     for qrimg in qrfiles:
-    #         display(qrimg.read_bytes())
-    if os.environ.get("MFAWESOME_TEST") == "1":
-        shutil.rmtree(exportdir)
-        logger.debug(f"Exported secrets deleted in test mode: {exportdir!s}")
-        return None
-    printwarn(f"Remember to delete the exported qr codes - the images are located in: {exportdir.resolve()!s}")
+    printwarn(f"XXXXRemember to delete the exported qr codes - the images are located in: {exportdir.resolve()!s}")
     return qrfiles
 
 
-def ImportFromGoogleAuthenticator(qrdir: str | Path) -> dict:
+def ImportFromQRImage(qrdir: str | Path) -> dict:
     return ConvertAuthSecretsToDict(ScanQRDir(qrdir))
 
 

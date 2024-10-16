@@ -64,13 +64,25 @@ logger = logging.getLogger("mfa")
 
 
 def PathEx(p: str | Path) -> Path:
+    if p == ".":
+        return Path().cwd()
     if not p:
         return None
+    if "$" in str(p):
+        p = os.path.expandvars(p)
     if isinstance(p, str):
-        p = Path(p).resolve(strict=False)
-    if "~" in str(p):
+        p = Path(p)
+    if str(p).startswith("~"):
         p = p.expanduser()
-    return p.resolve()
+    p = p.resolve(strict=False)
+    return p
+
+
+def PathExFile(p: str | Path):
+    p = PathEx(p)
+    if not p.is_file():
+        raise TypeError(f"{p!s} does not exist")
+    return p
 
 
 def sjoin(*a):
@@ -97,10 +109,13 @@ RetType = TypeVar("RetType")
 def CheckQRImportSupport() -> tuple:
     try:
         from qreader import QReader
+        qr = QReader()
 
         return True, None
     except (ImportError, ModuleNotFoundError) as e:
         return False, e
+    except Exception as e:
+        raise OSError("Ensure all dependencies are installed for QReader.  See readme.") from e
 
 
 def GetOSFlavor():
@@ -639,44 +654,7 @@ def check_yes_no(msg: str = "Yes or No?") -> bool:
         msg = stripcolors(msg)
     msg += " (y/n)?"
     inp = input(msg)
-    if inp.lower() in ["y", "yes", "yeah"]:
-        return True
-    return False
-
-
-def SearchSecrets(filterterm: str, secrets: dict, exact: bool = False, slackfactor: float = 1.4, cutoff: float = 0.55) -> list:
-    """
-    slackfactor - LOWER means closer match
-    cutoff - HIGHER means closer match (default for lib function is 0.4)
-    """
-    if filterterm is None:
-        return secrets
-    slack = int(len(filterterm) * slackfactor)
-    # cutoff = cutoff if len(filterterm) < 5 else 0.6
-    logger.debug(f"{filterterm=} ({len(filterterm)}) {slack=} {slackfactor=} {cutoff=}")
-    secretsraw = {}
-    results = {}
-    if exact:
-        for k, v in secrets.items():
-            secretsraw[k] = f"{k} {makestr(json.dumps(v))}"
-        for k, v in secretsraw.items():
-            if filterterm in v:
-                results[k] = secrets[k]
-        return results
-    filterterm = filterterm.lower()
-    for k, v in secrets.items():
-        secretsraw[k] = f"{k.lower()} {makestr(json.dumps(v)).lower()}"
-    for k, v in secretsraw.items():
-        if filterterm in v:
-            results[k] = secrets[k]
-            continue
-        if len(filterterm) <= 4:
-            continue
-        searchvals = [v[i : i + slack + len(filterterm)] for i in range(len(v) - slack - len(filterterm))]
-        matches = get_close_matches(filterterm, searchvals, n=1, cutoff=cutoff)
-        if matches:
-            results[k] = secrets[k]
-    return results
+    return inp.lower() in ["y", "yes", "yeah"]
 
 
 def FuzzyStrMatches(val: str, targets: list[str], n: int = 10, cutoff: float = 0.9) -> list[str]:

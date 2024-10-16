@@ -1,0 +1,48 @@
+default:
+  image: python:3.11
+
+stages:
+  - build
+  - test
+
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  POETRY_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pypoetry"
+  POETRY_VIRTUALENVS_IN_PROJECT: "true"
+
+cache:
+  paths:
+    - .cache/pip
+    - .cache/pytest_cache
+    - .cache/pypoetry
+    - .venv
+
+.poetry_setup: &poetry_setup
+  before_script:
+    - apt-get update && apt-get install -y apt-utils libgl1 libzbar0
+    - python -V
+    - python -m pip install --upgrade pip
+    - python -m pip install pipx
+    - python -m pipx install poetry==1.8.4
+    - export PATH=$PATH:$HOME/.local/bin
+    - poetry install
+
+Testing:
+  <<: *poetry_setup
+  stage: test
+  script:
+    - poetry run python -c "from qreader import QReader; qr = QReader()"
+    - poetry run pytest -v
+    - poetry run coverage run
+    - poetry run coverage report
+    - poetry run coverage xml
+  coverage: '/TOTAL.*\s+(\d+%)$/'
+  artifacts:
+    # https://docs.gitlab.com/ee/ci/yaml/index.html#artifactsexpire_in
+    expire_in: 1 week
+
+    # https://docs.gitlab.com/ee/ci/testing/test_coverage_visualization.html
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml

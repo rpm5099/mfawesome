@@ -37,8 +37,8 @@ from mfawesome.exception import (
     IncorrectPasswordOrSaltError,
     KeyGenerationError,
     StopIPython,
-    TestComplete,
-    TestFailError,
+    xTestComplete,
+    xTestFailError,
 )
 from mfawesome.utils import IsIPython, PrintStack, bytify, clear_output_line, clear_previous_line, colors, logprint, printcrit, printdbg, printerr, printok, printwarn, stripcolors
 
@@ -48,9 +48,9 @@ logger = logging.getLogger("mfa")
 def MFAExit(code: int = 0, test: bool = False) -> None:
     if test and code == 0:
         printdbg("Ignoring exit in test mode")
-        raise TestComplete
+        raise xTestComplete
     if test and code != 0:
-        raise TestFailError(f"Unknown test failure!")
+        raise xTestFailError(f"Unknown test failure!")
     if IsIPython():
         raise StopIPython("Stop right there!")
     sys.exit(code)
@@ -161,7 +161,7 @@ def GetPassword(getpassmsg: str, verify: bool = False, keylogprot: bool = False)
     limit = 3
     count = 0
     while True:
-        logger.debug(f"{count=} {limit=} {p0=} {p1=}")
+        logger.debug(f"{count=} {limit=}")  # {p0=} {p1=}")
         if count >= limit:
             printerr("Unable to get matching passwords!")
             raise ConfigError("Unable to get matching passwords!")

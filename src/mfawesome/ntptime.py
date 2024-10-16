@@ -330,7 +330,7 @@ class NTPTime:
 
         if not force:
             if abs(time.time() - self.stamp_time) > 3600:
-                logger.debug(f"Local time is stale by more than 1 hour, updating...")
+                logger.debug(f"Last NTP update is stale by more than 1 hour, updating...")
                 self.localtime_ok = False
             if self.localtime_ok:
                 self.NTPSuccess = True

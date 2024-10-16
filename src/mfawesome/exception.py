@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Self
 
 import cryptography.exceptions
 
+EXCEPTIONTESTMODE = False
+
 if TYPE_CHECKING:
     from collections.abc import Generator
 
@@ -28,10 +30,9 @@ SHOW_CURSOR = "\x1b[?25h"  # blinking \033[5m"
 
 class MFAwesomeError(Exception):
     def __init__(self, message: str = None, errors: list = []) -> None:
-        self.message = message if message else f"{str(self.__class__.__name__)} Error"
+        self.message = message if message else f"{self.__class__.__name__!s} Error"
         self.errors = errors
         super().__init__(self.message)
-
 
 
 def CheckIpython() -> bool:
@@ -48,9 +49,7 @@ def CheckIpython() -> bool:
 
 def TestCheck() -> bool:
     res = os.environ.get("MFAWESOME_TEST", False)
-    if res:
-        return True
-    return False
+    return bool(res)
 
 
 def ScreenSafe() -> None:
@@ -95,6 +94,8 @@ class KILLED(MFAwesomeError):
 
     def exit(self) -> None:
         print(f"{self.boldredstart}MFAwesome killed (terminal): {self.message}{self.reset}")
+        if EXCEPTIONTESTMODE:
+            return
         sys.stdout.write("\n")
         sys.stdout.write(SHOW_CURSOR)
         sys.stdout.flush()
@@ -130,10 +131,12 @@ def printcrit(s):
 
 class MFANoTracebackError(MFAwesomeError):
     def __init__(self, message: str = None, errors: list = []) -> None:
-        self.message = message if message else f"{str(self.__class__.__name__)} Error"
+        self.message = message if message else f"{self.__class__.__name__!s} Error"
         printerr(self.message)
         self.errors = errors
         super().__init__(self.message, self.errors)
+        if EXCEPTIONTESTMODE:
+            return
         sys.exit(1)
 
 
@@ -171,8 +174,8 @@ class NoInternetError(NTPError):
 
 
 class Invalid2FACodeError(MFAwesomeError):
-    def __init__(self, message: str | None =None):
-        self.message = message if message else f"{str(self.__class__.__name__)} Error"
+    def __init__(self, message: str | None = None):
+        self.message = message if message else f"{self.__class__.__name__!s} Error"
         super().__init__(self.message)
 
 
@@ -181,14 +184,14 @@ def getExceptionNameError(e: type) -> str:
 
 
 class ConfigError(MFANoTracebackError):
-    def __init__(self, message: str | None =None):
-        self.message = message if message else f"{str(self.__class__.__name__)} Error"
+    def __init__(self, message: str | None = None):
+        self.message = message if message else f"{self.__class__.__name__!s} Error"
         super().__init__(self.message)
 
 
 class ConfigNotFoundError(ConfigError):
     def __init__(self, message=None):
-        self.message = message if message else f"{str(self.__class__.__name__)} Error - check 'mfa --configdebug'"
+        self.message = message if message else f"{self.__class__.__name__!s} Error - check 'mfa --configdebug'"
         super().__init__(self.message)
 
 
@@ -238,7 +241,7 @@ class CritStopError(MFAwesomeError):
         super().__init__(self.message)
 
 
-class TestComplete(MFAwesomeError):
+class xTestComplete(MFAwesomeError):
     pass
 
 
@@ -246,7 +249,7 @@ class UnhandledException(MFAwesomeError):
     pass
 
 
-class TestFailError(MFAwesomeError):
+class xTestFailError(MFAwesomeError):
     pass
 
 
@@ -260,7 +263,15 @@ class QRScanError(MFAwesomeError):
     pass
 
 
+class QRImportNotSupportedError(MFAwesomeError):
+    pass
+
+
 class ArgumentError(MFANoTracebackError):
+    pass
+
+
+class ArgumentErrorIgnore(MFAwesomeError):
     pass
 
     # self.message = message

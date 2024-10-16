@@ -21,7 +21,7 @@ from rich import print as rprint
 from rich.text import Text
 
 from mfawesome import ntptime
-from mfawesome.config import ConfigIO, LoadNTPServers
+from mfawesome.config import ConfigIO, FilterSecrets, LoadNTPServers, SearchSecrets
 from mfawesome.countdownbars import Countdown, CountdownBar, CountdownBars, DoubleCountdown, ProgBar
 from mfawesome.exception import (
     KILLED,
@@ -40,7 +40,6 @@ from mfawesome.utils import (
     FindStrMatch,
     FuzzyStrMatches,
     IsIPython,
-    SearchSecrets,
     b32decode,
     clear_output_ex,
     clear_output_line,
@@ -428,16 +427,6 @@ class TFAResults:
         return self.remaining
 
 
-def FilterSecrets(secrets: dict) -> dict:
-    disabled = []
-    secretnames = list(secrets.keys())
-    for secretname in secretnames:
-        if secretname.startswith("__") or "totp" not in secrets[secretname]:
-            disabled.append(secrets.pop(secretname))  # noqa: PERF401
-    logger.debug(f"{len(disabled)} Secrets filtered by TOTP")
-    return secrets
-
-
 def multitotp(
     secrets: dict,
     ntpo: ntptime.NTPTime | None = None,
@@ -483,7 +472,6 @@ def multitotp(
     names = sorted(secrets.keys(), key=str.casefold)
     names = [x for x in names if "totp" in secrets[x]]
     names = list(secrets.keys())
-    # names = [x for x in names if filterterm in x] if exact else FuzzyStrMatches(filterterm, names)
     if len(names) == 0:
         printerr("No matching secrets found!")
         return None
@@ -501,8 +489,8 @@ def multitotp(
     )
     for name in names:
         secretdata = secrets[name]
-        totp = secretdata.get("totp", "") if secretdata.get("totp", "") is not None else ""
-        user = secretdata.get("user", "") if secretdata.get("user", "") is not None else ""
+        totp = secretdata.get("totp", "")
+        user = secretdata.get("user", "")
         password = secretdata.get("password", "") if secretdata.get("password", "") is not None else ""
         url = secretdata.get("url", "") if secretdata.get("url", "") is not None else ""
         code = ""

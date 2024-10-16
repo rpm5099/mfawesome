@@ -29,7 +29,7 @@ from mfawesome.mfa_secrets import (
 )
 
 with suppress(ImportError, ModuleNotFoundError, DependencyMissingError):
-    from mfawesome.qrcodes import ImportFromGoogleAuthenticator  # , Init_Otpauth_Migration, ScanQRDir
+    from mfawesome.qrcodes import ImportFromQRImage  # , Init_Otpauth_Migration, ScanQRDir
 from mfawesome.utils import (
     FF,
     CheckFile,
@@ -41,6 +41,8 @@ from mfawesome.utils import (
     check_yes_no,
     colors,
     fix_b32decode_pad,
+    get_close_matches,
+    makestr,
     print_sep_line,
     print_with_sep_line,
     printcrit,
@@ -120,7 +122,15 @@ EXAMPLE_CONFIG = {
 
 DEFAULT_CONFIG = {
     "loglevel": "INFO",
-    "secrets": {},
+    "secrets": {
+        "__Example": {
+            "totp": "[secret totp code]",
+            "user": "[some user]",
+            "url": "https://www.madeupsite.org/login.html",
+            "notes": ["whatever", "I", "want", "here"],
+            "whateveriwant": "also here",
+        },
+    },
     "keylogprotection": False,
     "timeserver": "time.cloudflare.com",
     "flags": {},
@@ -152,16 +162,11 @@ def ClearMFAConfigVars() -> None:
             os.environ.pop(v)
 
 
-# remove these at some point
-# TEST = TestCheck()
-# ShowMFAConfigVars()
-
-
-def LoadQRSecrets(secrets: dict, qrdir: str) -> dict:
-    otpauths = ImportFromGoogleAuthenticator(qrdir)
+def LoadQRSecrets(secrets: dict, qrdir: str, skipconfirm: bool = True) -> dict:
+    otpauths = ImportFromQRImage(qrdir)
     printwarn(f"The following {len(otpauths)} secret(s) were found, review and confirm you would like to add them:")
     rich.print_json(json.dumps(otpauths))
-    if not check_yes_no(colors("BOLD_ORANGE", "Add the above secrets?")):
+    if not skipconfirm and not check_yes_no(colors("BOLD_ORANGE", "Add the above secrets?")):
         printnorm("NOT adding secrets")
         return {}
     logger.debug(f"{otpauths=}")
@@ -172,7 +177,7 @@ def LoadQRSecrets(secrets: dict, qrdir: str) -> dict:
     for name, sdata in otpauths.items():
         scode = sdata.get("totp") or sdata.get("hotp")
         if scode and scode in current_secrets:
-            logger.critical(f"The secret is alredy in current secrets {scode}.  This secret will not be added!")
+            logger.error(f"The secret for '{name}' is alredy in current secrets {scode}.  This secret will not be added!")
             continue
         if name in current_names:
             _name = IncrementToDeconflict(name, current_names)
@@ -226,6 +231,9 @@ def LocateConfig(configfile: str | Path | None = None, noerr: bool = False) -> P
 
 
 def GenerateDefaultConfig(configfile: str | Path | None = None, example: bool = False) -> None:
+    configfile = Path().home() / ".config/mfawesome/mfawesome.conf" if not configfile else PathEx(configfile)
+    if configfile.is_dir():
+        configfile = configfile / "mfawesome.conf"
     logger.debug(f"{configfile=}")
     if os.environ.get("MFAWESOME_TEST") == "1":
         example = True
@@ -241,6 +249,44 @@ def GenerateDefaultConfig(configfile: str | Path | None = None, example: bool = 
     printok(f"Default config generated: {configfile.resolve()}")
 
 
+def ValidateConfig(config: dict, removedisabled: bool = False) -> dict:
+    if "secrets" not in config:
+        raise MFAwesomeError("The config is missing the 'secrets' parameter")
+    if loglevel := config.get("loglevel"):  # noqa: SIM102
+        if isinstance(loglevel, str):
+            config["loglevel"] = NormalizeLogLevel(loglevel)
+    disabled = []
+    if removedisabled:
+        for dis in list(config["secrets"].keys()):
+            if dis.startswith("__"):
+                config["secrets"].pop(dis)
+                disabled.append(dis)
+        if disabled:
+            logger.warning(f"Removed disabled secrets: {disabled}")
+    return config
+
+
+def BoolValidateConfig(configfile: str, warnings: bool = True) -> Tuple[bool | None, Optional[str]]:
+    try:
+        if not CheckFile(configfile):
+            return (None, "File does not exist")
+        config = Readyaml(configfile)
+        config = ValidateConfig(config, removedisabled=False)
+        err = []
+        if CheckSecretsEncrypted(config["secrets"]) is False:
+            if warnings:
+                printcrit(f"configfile is not encrypted {configfile}")
+            err.append("Secrets are NOT encrypted")
+        if isinstance(config["secrets"], dict) and len(config["secrets"]) == 0:
+            err.append("The config file contains no secrets")
+        if not err:
+            return (True, None)
+    except (MFAwesomeError, yaml.error.YAMLError) as e:
+        return (False, str(e))
+    else:
+        return (True, ", ".join(err))
+
+
 def ConfigDebug(cliconfig: str | Path | None = None) -> None:
     print_with_sep_line(printnorm, msg="Config resolution order - last valid config is selected...")
     cfname = "mfawesome.conf"
@@ -251,7 +297,7 @@ def ConfigDebug(cliconfig: str | Path | None = None) -> None:
     c = None
 
     def CheckConfig(index: int, cfgkey: str, path: Path, noexist_printfunc: Callable = printnorm) -> dict:
-        valid, err = BoolValidateConfig(path)
+        valid, err = BoolValidateConfig(path, warnings=False)
         pathstr = f"({path!s})" if path else ""
         if valid is True:
             return {"index": index, "cfgkey": cfgkey, "printfunc": printok, "msg": f"{index}.  Valid {cfgkey} config found {pathstr}", "path": path, "valid": valid, "err": err}
@@ -280,8 +326,6 @@ def ConfigDebug(cliconfig: str | Path | None = None) -> None:
         results.append(result)
     if winner:
         winner["msg"] += "..........................✓ Selected config"
-    
-    from pprint import pprint
 
     for result in results:
         result["printfunc"](result["msg"])
@@ -291,6 +335,11 @@ def ConfigDebug(cliconfig: str | Path | None = None) -> None:
             printok(f"\nEffective config appears valid: {winner['path']!s}")
         else:
             printwarn(f"\nEffective config file is {winner['path']!s} and appears valid but had warnings: {winner['err']}")
+        for i, r in enumerate(results):
+            if r == winner:
+                continue
+            if r["valid"] and r["err"]:
+                printwarn(f"Warning: Config file {r['path']} appears valid but had warnings: {r['err']}")
     else:
         printerr(f"\nNo valid config file found!")
 
@@ -320,9 +369,16 @@ def Writeyaml(fname: str, data: str) -> None:
     Path(fname).write_text(yaml.safe_dump(data))
 
 
-def ReadConfigFile(fname: str | Path | None = None) -> AnyStr:
-    if not Path(fname).exists() and Path(fname).is_file():
-        raise ConfigNotFoundError
+def ReadConfigFile(fname: str | Path | None = None, testmode: bool = False) -> AnyStr:
+    fname = PathEx(fname)
+    if not (fname.exists() or fname.is_file()):
+        if testmode:
+            return None
+        import traceback
+
+        traceback.print_stack()
+        printcrit(f"HOW THE FUCK ARE WE HERE????: {testmode}")
+        raise ConfigNotFoundError(f"READCONFIGFFILE The config file {fname!s} does not exist")
     Path.chmod(fname, 0o600)
     return Readyaml(fname)
 
@@ -343,47 +399,61 @@ def FormatSecrets(secrets: dict) -> dict:
 
 
 def CheckSecretsEncrypted(secrets: dict) -> bool:
-    # return not (isinstance(secrets, dict) and secrets)
     return not isinstance(secrets, dict)
 
 
-def ValidateConfig(config: dict, removedisabled: bool = False) -> dict:
-    if not isinstance(config.get("secrets"), dict):
-        raise MFAwesomeError("The config is missing the 'secrets' parameter")
-    if loglevel := config.get("loglevel"):  # noqa: SIM102
-        if isinstance(loglevel, str):
-            config["loglevel"] = NormalizeLogLevel(loglevel)
+def FilterSecrets(secrets: dict) -> dict:
     disabled = []
-    if removedisabled:
-        for dis in list(config["secrets"].keys()):
-            if dis.startswith("__"):
-                config["secrets"].pop(dis)
-                disabled.append(dis)
-        if disabled:
-            print(f"Removed disabled secrets: {disabled}")
-    return config
+    secretnames = list(secrets.keys())
+    for secretname in secretnames:
+        if secretname.startswith("__") or "totp" not in secrets[secretname]:
+            disabled.append(secrets.pop(secretname))  # noqa: PERF401
+    logger.debug(f"{len(disabled)} Secrets filtered by TOTP")
+    return secrets
 
 
-def BoolValidateConfig(configfile: str) -> Tuple[bool | None, Optional[str]]:
-    try:
-        if not CheckFile(configfile):
-            return (None, "File does not exist")
-        config = Readyaml(configfile)
-        config = ValidateConfig(config, removedisabled=False)
-        err = []
-        if CheckSecretsEncrypted(config["secrets"]) is False:
-            # raise MFAwesomeError("Secrets are NOT encrypted")
-            err.append("Secrets are NOT encrypted")
-        if isinstance(config["secrets"], dict) and len(config["secrets"]) == 0:
-            # raise MFAwesomeError("The config file contains no secrets")
-            err.append("The config file contains no secrets")
-        if not err:
-            return (True, None)
-        return (True, ", ".join(err))
-    except (MFAwesomeError, yaml.error.YAMLError) as e:
-        return (False, str(e))
-    else:
-        return (True, None)
+def SearchSecrets(filterterms: str | list, secrets: dict, exact: bool = False, slackfactor: float = 1.4, cutoff: float = 0.55) -> list:
+    """
+    slackfactor - LOWER means closer match
+    cutoff - HIGHER means closer match (default for lib function is 0.4)
+    """
+    if filterterms in [None, [], ""]:
+        return secrets
+    if isinstance(filterterms, str):
+        filterterms = [filterterms]
+
+    def SearchSecrets(filterterm, rsecrets):
+        slack = int(len(filterterm) * slackfactor)
+        # cutoff = cutoff if len(filterterm) < 5 else 0.6
+        logger.debug(f"{filterterm=} ({len(filterterm)}) {slack=} {slackfactor=} {cutoff=}")
+        secretsraw = {}
+        results = {}
+        if exact:
+            for k, v in rsecrets.items():
+                secretsraw[k] = f"{k} {makestr(json.dumps(v))}"
+            for k, v in secretsraw.items():
+                if filterterm in v:
+                    results[k] = rsecrets[k]
+            return results
+        filterterm = filterterm.lower()
+        for k, v in rsecrets.items():
+            secretsraw[k] = f"{k.lower()} {makestr(json.dumps(v)).lower()}"
+        for k, v in secretsraw.items():
+            if filterterm in v:
+                results[k] = rsecrets[k]
+                continue
+            if len(filterterm) <= 4:
+                continue
+            searchvals = [v[i : i + slack + len(filterterm)] for i in range(len(v) - slack - len(filterterm))]
+            matches = get_close_matches(filterterm, searchvals, n=1, cutoff=cutoff)
+            if matches:
+                results[k] = rsecrets[k]
+        return results
+
+    secrets_remaining = copy.copy(secrets)
+    for ft in filterterms:
+        secrets_remaining = SearchSecrets(ft, secrets_remaining)
+    return secrets_remaining
 
 
 class ConfigIO:
@@ -404,18 +474,9 @@ class ConfigIO:
         self.secrets_encrypted = False
         self.test = bool(os.environ.get("MFAWESOME_TEST", False))
         logger.debug(f"{configfile=}")
-        self.configfile = configfile if configfile else LocateConfig()
-        # if configfile is not None and not CheckFile(configfile):
-        #     logger.exception(f"The config file passed at command line does not exist: {configfile}")
-        #     # return
-        #     configfile = None
-        # configfile = configfile if configfile else os.environ.get("MFAWESOME_CONFIG")
-        # self.configfile = configfile if configfile else LocateConfig()
-        # logger.debug(f"{self.configfile=}")
-        # if isinstance(self.configfile, str):
-        #     self.configfile = Path(self.configfile).resolve()
+        self.configfile = configfile if configfile else LocateConfig(noerr=self.test)
         if config is None:
-            self._rawconfig = ReadConfigFile(fname=self.configfile)
+            self._rawconfig = ReadConfigFile(fname=self.configfile, testmode=self.test)
         else:
             self._rawconfig = config
         self._config = copy.copy(self._rawconfig)
@@ -432,7 +493,7 @@ class ConfigIO:
         if self.config is None:
             raise ConfigError("No config successfully loaded!")
         self.config = ValidateConfig(self.config)
-        self.secretscount = len(self.config["secrets"])
+        self.secretscount = len(FilterSecrets(self.config["secrets"]))
         self._configbackup = self.config
 
     def ValidateArgs(self) -> bool:
@@ -478,18 +539,28 @@ class ConfigIO:
             printnorm("Config is not currently encrypted, but it will be now...")
         config = self.config
         self.ipassword = GetPassword(getpassmsg="Changed MFAwesome Password", verify=True, keylogprot=self._rawconfig.get("keylogprot", False))
-        config = self.EncryptConfig()
+        if self.ipassword == "":
+            raise ConfigError(f"Password is blank.  Use 'mfa config decrypt' instead")
+        config = self.EncryptConfig(force=True)
         WriteConfigFile(self.configfile, config)
 
-    def ExportConfig(self, exportfile: str | Path | None) -> None:
-        logger.critical("CHANGE THIS TO ALLOW FILTERTERM")
-        exportfile = Path(exportfile).resolve() if exportfile is not None else Path("mfawesome_config_export").resolve()
-        logger.debug(f"Exportefile: {exportfile}")
+    #################  Add filterterm
+    def ExportConfig(self, exportfile: str | Path | None, filterterm: str | None = None, exact: bool = False) -> None:
+        if exportfile is None:
+            exportfile = "./exported_mfawesome.conf"
+        exportfile = PathEx(exportfile)
+        if exportfile.is_dir():
+            exportfile = exportfile / "exported_mfawesome.conf"
+        logger.debug(f"Exported config file: {exportfile}")
         if CheckSecretsEncrypted(self.config):
             self.config = self.DecryptSecrets()
-        config = self.config
+        config = copy.deepcopy(self.config)
+        if filterterm:
+            printcrit("filtering secrets")
+            config["secrets"] = SearchSecrets(filterterm, config["secrets"], exact=exact)
+            printcrit(config["secrets"])
         self.ipassword = GetPassword(getpassmsg="Exported MFAwesome Password", verify=True, keylogprot=self._rawconfig.get("keylogprot", False))
-        config = self.EncryptConfig()
+        config = self.EncryptConfig(force=True, config=config)
         config["keylogprotection"] = True
         WriteConfigFile(exportfile, config)
         printok(f"MFAwesome config file exported to {exportfile!s}")
@@ -505,17 +576,17 @@ class ConfigIO:
         if verify and not TestCheck():
             if check_yes_no(colors("MAX_RED", f"You are about to decrypt your secrets and store them in the clear on this machine in {self.configfile}\n\tAre you sure? (y/n)")):
                 WriteConfigFile(self.configfile, config)
-                printok("Config file decrypted!")
+                printok(f"Config file {self.configfile!s} decrypted!")
             else:
                 printok("Config file secrets *NOT* decrypted!")
         else:
             WriteConfigFile(self.configfile, config)
-            printok("Config file decrypted!")
+            printok(f"Config file {self.configfile!s} decrypted!")
         self.config = config
 
     def EncryptConfigFile(self, getpassmsg: str = "new MFAwesome config encryption password", outfilename: str | Path | None = None, verify: bool = True, keylogprot: bool = False) -> None:
         outfilename = outfilename if outfilename else self.configfile
-        config = ReadConfigFile(self.configfile)
+        config = ReadConfigFile(self.configfile, testmode=self.test)
         if outfilename == self.configfile and CheckSecretsEncrypted(config["secrets"]):
             printok(f"Config file {self.configfile} is already encrypted")
             return
@@ -572,14 +643,19 @@ class ConfigIO:
         Removed[secretname] = self._config["secrets"].pop(secretname)  # must use _config here to ensure that the nested dictionary secret gets updated
         printok(f"Secret removed: {Removed}")
 
-    def EncryptConfig(self, password: str | None = None, verify: bool = False, force: bool = False) -> None:
-        if self.secrets_encrypted_init is False and force is False:
+    def EncryptConfig(self, password: str | None = None, verify: bool = False, force: bool = True, config: dict | None = None) -> None:
+        configprovided = False
+        if config:
+            configprovided = True
+        else:
+            config = self.config
+        if self.secrets_encrypted_init is False and force is False and not configprovided:
             logger.debug(f"Secrets were not encrypted, skipping...")
-            return self.config
-        if CheckSecretsEncrypted(self.config):
+            return config
+        if CheckSecretsEncrypted(config):
             logger.debug("Secrets are already encrypted!")
-            return self.config
-        configcopy = copy.deepcopy(self.config)
+            return config
+        configcopy = copy.deepcopy(config)
         password = password if password else self.ipassword
         current_secrets = FormatSecrets(configcopy["secrets"])
         invalid_secrets = []
@@ -618,9 +694,8 @@ class ConfigIO:
         if json.dumps(self._configbackup) != json.dumps(self.config):
             printwarn("Config has changed, updating config on disk now!")
             if not CheckSecretsEncrypted(self.config["secrets"]):
-                self.config = self.EncryptConfig()
+                self.config = self.EncryptConfig(force=False)
             WriteConfigFile(self.configfile, self.config)
-        # logger.debug("Exiting configio context")
 
     def __call__(self, func):
         @functools.wraps(func)
