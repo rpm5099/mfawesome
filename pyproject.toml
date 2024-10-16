@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mfawesome"
-version = "0.1.0"
+version = "0.1.1"
 description = "2FA CLI Authenticator Tool"
 authors = ["Rob Milloy <rob@milloy.net>"]
 readme = "README.md"
@@ -14,9 +14,6 @@ cryptography = "^43.0.1"
 opencv-python = "^4.10.0.84"
 protobuf = "^5.28.2"
 qrcode = { extras = ["pil"], version = "^8.0" }
-qreader = "^3.14"
-pyzbar = "^0.1.9"
-coverage = "^7.6.3"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.3.3"
@@ -25,6 +22,11 @@ coverage = "^7.6.3"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.6.3"
+
+
+[tool.poetry.group.all.dependencies]
+qreader = "^3.14"
+pyzbar = "^0.1.9"
 
 [build-system]
 requires = ["poetry-core"]

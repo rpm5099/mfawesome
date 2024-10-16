@@ -54,4 +54,4 @@ docs/_build/
 internal/dependencies
 internal/tmp
 internal
-
+poetry.lock
