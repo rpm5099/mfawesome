@@ -12,7 +12,6 @@ import traceback
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, ClassVar, Self
 
-# from mfawesome.config import LoadNTPServers, LocateConfig, ReadConfigFile
 from mfawesome.exception import (
     ConfigNotFoundError,
     MFAwesomeError,
