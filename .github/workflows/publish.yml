@@ -38,3 +38,52 @@ jobs:
         user: __token__
         password: ${{ secrets.PYPI_API_TOKEN }}
         repository-url: https://pypi.org/legacy/
+
+  runtests:
+    environment:
+        name: pypi
+        url: https://test.pypi.org/project/mfawesome/
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: cache poetry install
+      uses: actions/cache@v2
+      with:
+        path: ~/.local
+        key: poetry-1.8.4-0
+    
+    - uses: snok/install-poetry@v1
+      with:
+        version: 1.4.1
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+    
+    - name: cache deps
+      id: cache-deps
+      uses: actions/cache@v2
+      with:
+        path: .venv
+        key: pydeps-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install Apt dependencies
+      uses: awalsh128/cache-apt-pkgs-action@latest
+      with:
+        packages: apt-utils libgl1 libzbar0 libzbar-dev zbar-tools python3-pyzbar python3-zbar
+        version: 1.0
+
+    - run: poetry install --no-interaction --no-root --all-extras
+    
+    - name: Run Tests with Poetry
+      run: |
+        poetry run python -c "from qreader import QReader; qr = QReader()"
+        poetry run pytest -v
+        poetry run coverage run
+        poetry run coverage report
+        poetry run coverage xml
+      

@@ -11,6 +11,7 @@
 # https://github.com/snok/install-poetry
 # https://python-poetry.org/docs/pyproject/#extras
 # https://github.com/awalsh128/cache-apt-pkgs-action
+# This is used under the poetry install line, but it breaks qreader so it's disabledif: steps.cache-deps.outputs.cache-hit != 'true'
 
 name: Upload MFAwesome to Test-Pypi
 
