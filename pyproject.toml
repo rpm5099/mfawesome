@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mfawesome"
-version = "0.1.44"
+version = "0.1.45"
 description = "CLI Multi-Factor Authenticator Tool"
 authors = ["Rob Milloy <rob@milloy.net>"]
 readme = "README.md"
