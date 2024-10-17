@@ -319,7 +319,7 @@ def Run(args):
             printwarn("WARNING: Enabled showing secrets - this will reveal sensitive information on your screen!")
         secrets = configio.config["secrets"]
         timeserver = configio.config.get("timeserver", None)
-        timeserver = timeserver if timeserver else ntptime.LoadNTPServers()
+        timeserver = timeserver if timeserver else config.LoadNTPServers()
         if args.continuous:
             totp.multitotp_continuous(
                 secrets,
