@@ -64,10 +64,9 @@ jobs:
       with:
         packages: apt-utils libgl1 libzbar0 libzbar-dev zbar-tools python3-pyzbar python3-zbar
         version: 1.0
-    
     - run: poetry install --no-interaction --no-root -E all
-    - run: poetry install --no-interaction --no-root --all-extras
-    
+      if: steps.cache-deps.outputs.cache-hit != 'true'
+    - run: poetry install --no-interaction -E all    
 
     - name: Run Tests with Poetry
       run: |
