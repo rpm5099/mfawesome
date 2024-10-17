@@ -7,7 +7,7 @@
 # documentation.
 
 
-
+#### disabledif: steps.cache-deps.outputs.cache-hit != 'true'
 # https://jacobian.org/til/github-actions-poetry/
 # https://github.com/snok/install-poetry
 # https://python-poetry.org/docs/pyproject/#extras
@@ -91,9 +91,8 @@ jobs:
         packages: apt-utils libgl1 libzbar0
         version: 1.0
 
-    - run: poetry install --no-interaction --no-root -E all
-      if: steps.cache-deps.outputs.cache-hit != 'true'
-    
+    - run: poetry install --no-interaction --no-root --all-extras
+
     - name: Run Tests with Poetry
       run: |
         poetry run python -c "from qreader import QReader; qr = QReader()"
@@ -101,3 +100,4 @@ jobs:
         poetry run coverage run
         poetry run coverage report
         poetry run coverage xml
+
