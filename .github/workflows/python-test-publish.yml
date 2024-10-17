@@ -7,7 +7,6 @@
 # documentation.
 
 
-#### disabledif: steps.cache-deps.outputs.cache-hit != 'true'
 # https://jacobian.org/til/github-actions-poetry/
 # https://github.com/snok/install-poetry
 # https://python-poetry.org/docs/pyproject/#extras
@@ -88,16 +87,21 @@ jobs:
     - name: Install Apt dependencies
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: apt-utils libgl1 libzbar0
+        packages: apt-utils libgl1 libzbar0 libzbar-dev zbar-tools python3-pyzbar python3-zbar
         version: 1.0
 
     - run: poetry install --no-interaction --no-root --all-extras
 
+
     - name: Run Tests with Poetry
       run: |
+        apt list | grep -i zbar
         poetry run python -c "from qreader import QReader; qr = QReader()"
         poetry run pytest -v
         poetry run coverage run
         poetry run coverage report
         poetry run coverage xml
 
+
+
+##disabledif: steps.cache-deps.outputs.cache-hit != 'true'
