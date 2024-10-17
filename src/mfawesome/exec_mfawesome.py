@@ -24,7 +24,6 @@ import mfawesome
 from mfawesome import (
     __author__,
     __author_email__,
-    __build_date__,
     __description__,
     __logo__,
     __title__,
@@ -366,7 +365,7 @@ def main(rawargs: list | tuple | None = None):
 
     if args.mfa_command == "version":
         print(colors("MAX_RED", __logo__))
-        printnorm(f"MFAwesome Version {__version__} {__build_date__} {__url__}")
+        printnorm(f"MFAwesome Version {__version__}   {__url__}")
         print(f"{__author__}  ({__author_email__})")
         return MFAExit()
 
@@ -455,10 +454,11 @@ def main(rawargs: list | tuple | None = None):
             return MFAExit()
 
         if args.secrets_command == "import":
-            qrsupport, err = CheckQRImportSupport()
-            if not qrsupport:
-                raise QRImportNotSupportedError
             with ConfigIORunWrapper(args, validate_config=False) as configio:
+                qrsupport, err = CheckQRImportSupport()
+                logger.debug(f"QR Support result: {qrsupport=} {err=}")
+                if not qrsupport:
+                    raise QRImportNotSupportedError
                 newsecrets = LoadQRSecrets(configio._config["secrets"], qrdir=args.importdir, skipconfirm=args.test)
                 configio.AddSecrets(newsecrets)
             return MFAExit()

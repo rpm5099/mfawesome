@@ -5,13 +5,21 @@
 #   / /  / / __/ / ___ | |/ |/ /  __(__  ) /_/ / / / / / /  __/
 #  /_/  /_/_/   /_/  |_|__/|__/\___/____/\____/_/ /_/ /_/\___/
 
+import importlib.metadata
+
+meta = importlib.metadata.metadata("mfawesome")
 __title__ = "MFAwesome"
-__description__ = "2FA CLI Authenticator Tool"
-__url__ = "https://github.com/rpm5099/mfawesome"
-__version__ = "0.1.42"
-__build_date__ = "2024-10-16"
-__author__ = "Rob Milloy"
-__author_email__ = "rob@milloy.net"
+__version__ = importlib.metadata.version("mfawesome")
+__description__ = meta["Summary"]
+__url__ = meta["Home-page"]
+__author__ = meta["Author"]
+__author_email__ = meta["Author-email"]
+# __description__ = "2FA CLI Authenticator Tool"
+# __url__ = "https://github.com/rpm5099/mfawesome"
+# __version__ = "0.1.42"
+# __build_date__ = "2024-10-16"
+# __author__ = "Rob Milloy"
+# __author_email__ = "rob@milloy.net"
 
 __logo__ = r"""
 
@@ -22,7 +30,7 @@ __logo__ = r"""
  /_/  /_/_/   /_/  |_|__/|__/\___/____/\____/_/ /_/ /_/\___/   
 
 """
-__logo__ += __description__ + "\n"
+# __logo__ += __description__ + "\n"
 __logor__ = "\x1b[0;0;39m\x1b[1m\x1b[38;5;196m" + __logo__ + "\x1b[0;0;39m"
 
 
