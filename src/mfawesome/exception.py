@@ -191,7 +191,7 @@ class ConfigError(MFANoTracebackError):
 
 class ConfigNotFoundError(ConfigError):
     def __init__(self, message=None):
-        self.message = message if message else f"{self.__class__.__name__!s} Error - check 'mfa --configdebug'"
+        self.message = message if message else f"{self.__class__.__name__!s} Error - check 'mfa config debug'"
         super().__init__(self.message)
 
 

@@ -7,7 +7,6 @@
 
 # **MFAwesome: CLI Multi Factor Authenticaton**
 
-
 # Summary
 
 **MFAwesome** (MFA) is an open-source system cross-platform command line based multifactor authentication tool. It allows secure storage of your TOTP and HOTP secrets in a simple config file that can be exported for use even on systems you do not trust. It allows importing secrets via Google Authenticator QR codes.
@@ -24,6 +23,10 @@ Due to the large size of the dependencies required for python's [qreader](https:
 # Preview
 
 ![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/run_cont.png?raw=true)
+
+# Issue Reporting
+
+If you have any MF'ing issues with the MF'ing package contact the MF'ing author or submit an MF'ing ticket so he can make it ***MFAWesome***.
 
 # Requirements
 
@@ -86,7 +89,7 @@ then ...
 
 # Config File
 
-The config file is named `mfawesome.conf` by default.  This can be changed by specifying via environment variable.  It is formatted in [YAML](https://yaml.org/spec/1.2.2/).  It's location is checked for in the following resolution order which can be checked using `mfa --configdebug`:
+The config file is named `mfawesome.conf` by default.  This can be changed by specifying via environment variable.  It is formatted in [YAML](https://yaml.org/spec/1.2.2/).  It's location is checked for in the following resolution order which can be checked using `mfa config debug`:
 
 1. MFAWESOME_CONFIG environment variable (full file name with path)
 2. Local directory for mfawesome.conf

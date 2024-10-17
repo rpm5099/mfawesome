@@ -164,6 +164,9 @@ def ClearMFAConfigVars() -> None:
 
 def LoadQRSecrets(secrets: dict, qrdir: str, skipconfirm: bool = True) -> dict:
     otpauths = ImportFromQRImage(qrdir)
+    if len(otpauths) == 0:
+        printwarn(f"No valid secrets were found in the images.  Ensure they are valid QR images with OTP secrets in them")
+        return {}
     printwarn(f"The following {len(otpauths)} secret(s) were found, review and confirm you would like to add them:")
     rich.print_json(json.dumps(otpauths))
     if not skipconfirm and not check_yes_no(colors("BOLD_ORANGE", "Add the above secrets?")):
@@ -225,7 +228,7 @@ def LocateConfig(configfile: str | Path | None = None, noerr: bool = False) -> P
         return Path(valid_config_file)
     if noerr:
         return False
-    printerr("Config not found, showing output of 'mfa --configdebug'")
+    printerr("Config not found, showing output of 'mfa config debug'")
     ConfigDebug()
     raise ConfigNotFoundError
 
