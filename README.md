@@ -86,7 +86,7 @@ then ...
 
 # Config File
 
-The config file is named `mfawesome.conf` by default.  This can be changed by specifying via environment variable.  It is formatted in [YAML](https://yaml.org/spec/1.2.2/).  It's location is checked for in the following resolution order which can be checked using `mfa --configdebug`:
+The config file is named `mfawesome.conf` by default.  This can be changed by specifying via environment variable.  It is formatted in [YAML](https://yaml.org/spec/1.2.2/).  It's location is checked for in the following resolution order which can be checked using `mfa config debug`:
 
 1. MFAWESOME_CONFIG environment variable (full file name with path)
 2. Local directory for mfawesome.conf

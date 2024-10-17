@@ -225,7 +225,7 @@ def LocateConfig(configfile: str | Path | None = None, noerr: bool = False) -> P
         return Path(valid_config_file)
     if noerr:
         return False
-    printerr("Config not found, showing output of 'mfa --configdebug'")
+    printerr("Config not found, showing output of 'mfa config debug'")
     ConfigDebug()
     raise ConfigNotFoundError
 
