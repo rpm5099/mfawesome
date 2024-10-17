@@ -92,7 +92,6 @@ jobs:
         version: 1.0
 
     - run: poetry install --no-interaction --no-root --all-extras
-      if: steps.cache-deps.outputs.cache-hit != 'true'
 
     - name: Run Tests with Poetry
       run: |
