@@ -82,9 +82,10 @@ jobs:
         name: pypi
         url: https://test.pypi.org/project/mfawesome/
     runs-on: ubuntu-latest
+    needs: [runtests]
+    if: always() && needs.runtests.result == 'success'
     permissions:
         id-token: write
-
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
