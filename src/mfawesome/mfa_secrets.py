@@ -149,11 +149,11 @@ def KeylogProtection(
 def GetPassword(getpassmsg: str, verify: bool = False, keylogprot: bool = False) -> str:
     p0 = None
     p1 = None
-    if envpassword := os.environ.get("MFAWESOME_PASSWD"):
+    if envpassword := os.environ.get("MFAWESOME_PWD"):
         logger.debug(f"Read password from environment: {envpassword}")
         p0 = envpassword
         if os.environ.get("MFAWESOME_TEST"):
-            logger.debug(f"Skipping verification in test mode, returning test password from MFAWESOME_PASSWD env var {p0}")
+            logger.debug(f"Skipping verification in test mode, returning test password from MFAWESOME_PWD env var {p0}")
             return p0
     getpassword = getpass.getpass
     if keylogprot:

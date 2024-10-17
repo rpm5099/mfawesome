@@ -37,7 +37,7 @@ mfarun = mfawesome.exec_mfawesome.main
 """
 Manually set environment at cli
 export MFAWESOME_CONFIG=/tmp/mfa/mfa_test.conf
-export MFAWESOME_PASSWD="mfaX"
+export MFAWESOME_PWD="mfaX"
 export MFAWESOME_LOGLEVEL=30
 export MFAWESOME_TEST=1
 mfa config generate /tmp/mfa/mfa_test.conf
@@ -83,7 +83,7 @@ def SetupTestMode():
     print_test_msg("Preparing test environment")
     # os.environ["NTP_SERVERS"] = "pfsense.milloy.arpa:time.google.com"
     os.environ["MFAWESOME_CONFIG"] = "/tmp/mfa/mfa_test.conf"
-    os.environ["MFAWESOME_PASSWD"] = "mfaX"  # noqa: S105
+    os.environ["MFAWESOME_PWD"] = "mfaX"  # noqa: S105
     os.environ["MFAWESOME_LOGLEVEL"] = "DEBUG"
     os.environ["MFAWESOME_TEST"] = "1"
     ShowMFAConfigVars()
