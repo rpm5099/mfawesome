@@ -34,7 +34,7 @@ Python:
 
 `python>=3.11`
 
-Python Libraries (`pip install mfawesome`:
+Python Libraries `pip install mfawesome`:
 
 - `rich` (CLI Display output)
 - `pyyaml` (Config/Secrets storage)
@@ -163,8 +163,7 @@ password hashing:
 - Blocksize: 8
 - Parallelization: 1
 
-Salt, Chacha \"add\" and Chacha \"nonce\" are generated using
-`os.urandom()`.
+Salt, Chacha \"add\" and Chacha \"nonce\" are generated using `secrets.token_bytes(...)`.
 
 # Other Config File Options
 

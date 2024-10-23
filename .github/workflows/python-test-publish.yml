@@ -1,10 +1,25 @@
-name: Upload MFAwesome to Pypi
+# This workflow will upload a Python Package using Twine when a release is created
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python#publishing-to-package-registries
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+
+
+# https://jacobian.org/til/github-actions-poetry/
+# https://github.com/snok/install-poetry
+# https://python-poetry.org/docs/pyproject/#extras
+# https://github.com/awalsh128/cache-apt-pkgs-action
+# https://gist.github.com/gh640/233a6daf68e9e937115371c0ecd39c61
+# This is used under the poetry install line, but it breaks qreader so it's disabledif: steps.cache-deps.outputs.cache-hit != 'true'
+
+name: Upload MFAwesome to Test-Pypi
 
 on:
   push:
     branches:
-      - main
-      - release/*
+      - dev
   release:
     types: [published]
 
@@ -49,7 +64,6 @@ jobs:
       with:
         packages: apt-utils libgl1 libzbar0 libzbar-dev zbar-tools python3-pyzbar python3-zbar
         version: 1.0
-
     - run: poetry install --no-interaction --no-root -E all
       if: steps.cache-deps.outputs.cache-hit != 'true'
     - run: poetry install --no-interaction -E all    
@@ -65,7 +79,7 @@ jobs:
   deploy:
     environment:
         name: pypi
-        url: https://pypi.org/project/mfawesome/
+        url: https://test.pypi.org/project/mfawesome/
     runs-on: ubuntu-latest
     needs: [runtests]
     if: always() && needs.runtests.result == 'success'
@@ -87,6 +101,8 @@ jobs:
       with:
         verbose: true
         user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
-        repository-url: https://pypi.org/legacy/
-      
+        password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+        repository-url: https://test.pypi.org/legacy/
+
+
+

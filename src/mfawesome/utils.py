@@ -109,6 +109,7 @@ RetType = TypeVar("RetType")
 def CheckQRImportSupport() -> tuple:
     try:
         from qreader import QReader
+
         qr = QReader()
 
         return True, None
@@ -329,58 +330,11 @@ def jsondump(*args: list, **kwargs: dict) -> str:
             if indent is True:
                 kwargs["option"] = json.OPT_INDENT_2
         return json.dumps(*args, **kwargs).decode()
-    if indent := kwargs.get("indent", None):
+    if indent := kwargs.get("indent"):
         indent = 0
         if indent is True:
             kwargs["indent"] = 4
     return json.dumps(*args, **kwargs)
-
-
-# def IsIpython() -> bool:
-#     """Return one of None, console and jupyter"""
-#     return True
-#     try:
-#         from IPython import get_ipython
-
-#         shell = repr(get_ipython())  # .__class__.__name__
-#         logger.critical(f"IS IT FUCKING IPYTHON??? {shell=} {get_ipython()=} {get_ipython()!r}", stacklevel=2)
-#         # traceback.print_stack()
-#         # if "ipykernel" in repr(get_ipython())
-#         if "ZMQInteractiveShell" in shell:
-#             logger.critical("RETURNING TRUE FOR IPYTHON")
-#             return True
-#         # if shell is None or shell == "NoneType":
-#         #     return False
-#         # if shell == "TerminalInteractiveShell":
-#         #     return "ipython_terminal"
-#         # if shell == "ZMQInteractiveShell":
-#         #     return "jupyter/qt"
-#         raise RuntimeError(f"Unknown value for shell: {shell}")
-#     except (ImportError, RuntimeError) as e:
-#         # logger.critical(f"{e!r}")
-#         # traceback.print_exception(e)
-#         return False
-
-
-# def get_runtime():
-#     if "google.colab" in sys.modules:
-#         return "Google Colab"
-#     elif "ipykernel" in sys.modules:
-#         if "jupyter" in sys.modules:
-#             return "JupyterLab"
-#         else:
-#             return "Jupyter Notebook"
-#     elif "win32" in sys.platform:
-#         if "CMDEXTVERSION" in os.environ:
-#             return "Windows Command Prompt/terminal"
-#         else:
-#             return "Windows PowerShell"
-#     elif "darwin" in sys.platform:
-#         return "MacOS Terminal"
-#     # elif hasattr(__main__, "__file__"):
-#     #     return "Linux Terminal"
-#     else:
-#         return "Interactive Python Shell"
 
 
 def IsIPython():
@@ -391,11 +345,6 @@ def IsIPython():
         return not sys.stdin.isatty()
     except ImportError as e:
         return False
-    # return not sys.stdin.isatty()
-    # rt = get_runtime().lower()
-    # if "terminal" not in rt:
-    #     return True
-    # return False
 
 
 if IsIPython():
