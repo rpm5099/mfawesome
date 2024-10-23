@@ -178,9 +178,7 @@ class ProgBar:
 
     def bar(self, remaining: None = None) -> str:
         self.remaining = remaining if remaining is not None else self.remaining
-        if self.remaining <= 0:
-            self.remaining = 0
-        # barwidth = ProgBar.get_term_size()[0] - 70
+        self.remaining = max(0, self.remaining)
         prog = int(self.barwidth * (self.remaining / self.fixedbartime))
         gone = self.barwidth - prog
         return ProgBar.hms(f"{self.msg:20.20}  [{self.barchar * prog}{gone * self.filler}]  ", self.remaining)
@@ -213,7 +211,7 @@ class CountdownBars:
     Example Usage:
     t1 = ProgBar(msg="Bar1", systime=True)
     t2 = ProgBar(msg="Bar2", timertime=35, fixedbartime=90)
-    t3 = ProgBar(msg="FUCK YEAH", timertime=17, fixedbartime=20)
+    t3 = ProgBar(msg=" YEAH", timertime=17, fixedbartime=20)
     progbars = [t1, t2, t3]
     bars = CountdownBars(progbars, textabove="Here's some progress bars", textbelow="This is below the bars")
     bars.begin()

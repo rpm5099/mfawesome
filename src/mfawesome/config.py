@@ -380,7 +380,6 @@ def ReadConfigFile(fname: str | Path | None = None, testmode: bool = False) -> A
         import traceback
 
         traceback.print_stack()
-        printcrit(f"HOW THE FUCK ARE WE HERE????: {testmode}")
         raise ConfigNotFoundError(f"READCONFIGFFILE The config file {fname!s} does not exist")
     Path.chmod(fname, 0o600)
     return Readyaml(fname)
