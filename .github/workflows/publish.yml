@@ -33,7 +33,7 @@ jobs:
     
     - uses: snok/install-poetry@v1
       with:
-        version: 1.4.1
+        version: 1.8.4
         virtualenvs-create: true
         virtualenvs-in-project: true
     
@@ -71,6 +71,7 @@ jobs:
     if: always() && needs.runtests.result == 'success'
     permissions:
         id-token: write
+        attestations: write
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
@@ -82,11 +83,15 @@ jobs:
         python3 -m pip install --upgrade pip setuptools wheel build
     - name: Build package
       run: python3 -m build
+    - name: Attest
+      uses: actions/attest-build-provenance@v2
+      with:
+        subject-path: '${{ github.workspace }}'
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         verbose: true
-        user: __token__
-        password: ${{ secrets.PYPI_API_TOKEN }}
+        # user: __token__
+        # password: ${{ secrets.PYPI_API_TOKEN }}
         repository-url: https://upload.pypi.org/legacy/
       
