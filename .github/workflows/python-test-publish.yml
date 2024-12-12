@@ -27,8 +27,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
-  attestations: write
 
 jobs:
   runtests:
@@ -89,6 +87,7 @@ jobs:
     if: always() && needs.runtests.result == 'success'
     permissions:
         id-token: write
+        attestations: write
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
