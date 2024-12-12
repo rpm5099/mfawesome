@@ -103,7 +103,7 @@ jobs:
     - name: Attest
       uses: actions/attest-build-provenance@v2
       with:
-        subject-path: '${{ github.workspace }}/mfawesome'
+        subject-path: '${{ github.workspace }}'
     - name: Publish package
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
