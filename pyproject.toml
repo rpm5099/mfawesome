@@ -10,7 +10,7 @@ repository = "https://github.com/rpm5099/mfawesome"
 keywords = ["totp", "hotp", "2fa", "mfa", "cli"]
 
 [tool.poetry.dependencies]
-python = ">= 3.11"
+python = ">= 3.11,< 4.0"
 rich = ">= 13.9.2"
 PyYAML = ">= 6.0.2"
 numpy = ">= 1.26.4"
@@ -19,7 +19,7 @@ opencv-python = ">= 4.10.0.84"
 protobuf = ">= 5.28.2"
 qrcode = { extras = ["pil"], version = ">= 8.0" }
 pyzbar = { version = ">= 0.1.9", optional = true }
-qreader = { version = ">= 3.14", optional = true, python = ">=3.11,<=3.12" }
+qreader = { version = ">= 3.14", optional = true, python = ">= 3.11,< 3.13" }
 
 [tool.poetry.group.test.dependencies]
 pytest = ">= 8.3.3"
