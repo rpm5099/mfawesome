@@ -398,7 +398,7 @@ def QRExport(secrets: dict, exportdir: str | Path | None = None, max_secrets_per
         qrimg.save(fout)
         if IsIPython():
             import IPython
-            from IPython.core.display import HTML, display
+            from IPython.display import HTML, display
 
             printok(f"MFAWESOME SECRETS EXPORT {i}:")
             display(qrimg.get_image())
