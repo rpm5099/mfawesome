@@ -5,6 +5,7 @@ import argparse
 import json
 import logging
 import pathlib
+import site
 import sys
 import traceback
 from contextlib import suppress
@@ -303,6 +304,20 @@ def Run(args):
         MFAExit()
 
 
+def LocateMFATests():
+    for sp in site.getsitepackages():
+        tdir = Path(sp) / "tests"
+        if tdir.is_dir():
+            for x in tdir.iterdir():
+                mfatests = tdir / "test_mfawesome.py"
+                if mfatests.is_file():
+                    return mfatests
+    mfatests = Path(mfawesome.__file__).parent.parent.parent / "tests/test_mfawesome.py"
+    if not mfatests.is_file():
+        raise MFAwesomeError("Unable to find MFAwesome tests")
+    return mfatests
+
+
 def main(rawargs: list | tuple | None = None):
     global logger
     rawargs = rawargs if rawargs is not None else sys.argv[1:]
@@ -448,8 +463,9 @@ def main(rawargs: list | tuple | None = None):
         except ModuleNotFoundError as e:
             printerr("The pytest package must be installed to run test - 'pip install pytest'")
             return 1
-
-        result = pytest.main(["tests/test_mfawesome.py"])
+        mfatests = str(LocateMFATests())
+        logger.debug(f"Located mfa tests: {mfatests}")
+        result = pytest.main([])
         if result != 0:
             printerr(f"MFAwesome tests failed - see pytest output for details")
             return result
