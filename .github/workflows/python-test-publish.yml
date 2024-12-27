@@ -14,8 +14,6 @@
 # https://gist.github.com/gh640/233a6daf68e9e937115371c0ecd39c61
 # This is used under the poetry install line, but it breaks qreader so it's disabledif: steps.cache-deps.outputs.cache-hit != 'true'
 
-# Need to migrate to actions/cache@v4
-
 name: Upload MFAwesome to Test-Pypi
 
 on:
@@ -107,8 +105,6 @@ jobs:
       uses: pypa/gh-action-pypi-publish@release/v1
       with:
         verbose: true
-        # user: __token__
-        # password: $ # {{ secrets.TEST_PYPI_API_TOKEN }} - not needed with attestation
         repository-url: https://test.pypi.org/legacy/
 
 

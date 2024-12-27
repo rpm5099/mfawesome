@@ -105,7 +105,6 @@ def DownloadVCRedist(vc_url: str = "https://download.microsoft.com/download/2/E/
 
 RetType = TypeVar("RetType")
 
-
 def GetOSFlavor():
     if platform.system() == "Linux":
         # check if debian
