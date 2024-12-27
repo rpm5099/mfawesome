@@ -31,7 +31,6 @@ Testing:
   <<: *poetry_setup
   stage: test
   script:
-    - poetry run python -c "from qreader import QReader; qr = QReader()"
     - poetry run pytest -v
     - poetry run coverage run
     - poetry run coverage report

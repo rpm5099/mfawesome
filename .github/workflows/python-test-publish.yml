@@ -62,7 +62,7 @@ jobs:
     - name: Install Apt dependencies
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: apt-utils libgl1 libzbar0 libzbar-dev zbar-tools python3-pyzbar python3-zbar
+        packages: apt-utils libgl1 libzbar0 libzbar-dev zbar-tools
         version: 1.0
     - run: poetry install --no-interaction --no-root -E all
       if: steps.cache-deps.outputs.cache-hit != 'true'
@@ -70,7 +70,6 @@ jobs:
 
     - name: Run Tests with Poetry
       run: |
-        poetry run python -c "from qreader import QReader; qr = QReader()"
         poetry run pytest -vq
         poetry run coverage run
         poetry run coverage report
