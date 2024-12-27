@@ -105,20 +105,6 @@ def DownloadVCRedist(vc_url: str = "https://download.microsoft.com/download/2/E/
 
 RetType = TypeVar("RetType")
 
-
-def CheckQRImportSupport() -> tuple:
-    try:
-        from qreader import QReader
-
-        qr = QReader()
-
-        return True, None
-    except (ImportError, ModuleNotFoundError) as e:
-        return False, e
-    except Exception as e:
-        raise OSError("Ensure all dependencies are installed for QReader.  See readme.") from e
-
-
 def GetOSFlavor():
     if platform.system() == "Linux":
         # check if debian
@@ -306,7 +292,7 @@ def makestr(
             return ""
         if isinstance(x, binarytypes):
             if encoding == "autodetect" and "chardet" in locals():
-                enc = chardet.detect(x[0:detectlimit])["encoding"]
+                enc = chardet.detect(x[0:detectlimit])["encoding"]  # type: ignore
                 return x.decode(enc, errors=errors)
             return x.decode(errors=errors)
         if isinstance(x, str):
@@ -339,7 +325,7 @@ def jsondump(*args: list, **kwargs: dict) -> str:
 
 def IsIPython():
     try:
-        from IPython import get_ipython
+        from IPython import get_ipython  # type: ignore
         from IPython.display import clear_output, display
 
         return not sys.stdin.isatty()
@@ -348,7 +334,7 @@ def IsIPython():
 
 
 if IsIPython():
-    from IPython import get_ipython
+    from IPython import get_ipython  # type: ignore
     from IPython.display import clear_output, display
 
     def doDisplay(*args: list, **kwargs: dict) -> None:
@@ -481,12 +467,11 @@ def stripcolors(s: str) -> str:
     return ansi_escape.sub("", s)
 
 
-def colors(*s: list) -> str:
+def colors(*s: list[str]) -> str:
     """Return colored string.  Uses raw ANSI codes rather than a library.  The color is the first argument colors("red", "some string", "another string")"""
     if len(s) == 1:
         return " ".join(s)
     color = s[0]
-    s = s
     return f"{ANSIColors.RESET}{getattr(ANSIColors, color.upper())}{flatten(s[1:])}{ANSIColors.RESET}"
 
 
@@ -771,20 +756,6 @@ def shannon_entropy_native(data: bytes, mode: str | bytes = b"binary", customalp
     return entropy * 100
 
 
-def flatten(*lst: list, sep: str = " ") -> str:
-    if not lst:
-        return ""
-
-    def _flatten(lst: list) -> Generator:
-        for item in lst:
-            if isinstance(item, list | tuple | set):
-                yield from _flatten(item)
-            else:
-                yield str(item)
-
-    return sep.join(_flatten(lst))
-
-
 def PercentDecode(s: str, limit: int = 5) -> str:
     i = 0
     while "%" in s:
@@ -954,12 +925,10 @@ def getdatetime(mil: bool = False, tz: bool = True, zulu: bool = False) -> str:
     return time.strftime(fstr, tobj)
 
 
-def gettime(mil: bool = False, tz: bool = True, zulu: bool = False, seconds_offset: float = 0.0) -> str:
+def gettime(ts: float | None = None, mil: bool = False, tz: bool = True, zulu: bool = False) -> str:
     fstr = timemil if mil else timetz
     fstr += " %Z" if tz else ""
-    tobj = time.gmtime() if zulu else time.localtime()
-    if seconds_offset != 0:
-        tobj = fliptimetype(fliptimetype(tobj) + datetime.timedelta(seconds=seconds_offset))
+    tobj = time.localtime(ts) if ts else time.gmtime() if zulu else time.localtime()
     return time.strftime(fstr, tobj)
 
 
