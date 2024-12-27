@@ -4,7 +4,7 @@ import os
 import platform
 import sys
 from contextlib import suppress
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 import cryptography.exceptions
 
@@ -37,7 +37,7 @@ class MFAwesomeError(Exception):
 
 def CheckIpython() -> bool:
     try:
-        from IPython import get_ipython
+        from IPython import get_ipython  # type: ignore
 
         shell = get_ipython().__class__.__name__
         if shell != "NoneType":
@@ -146,7 +146,7 @@ class StopIPython(Exception):
 
 
 class NTPError(MFAwesomeError):
-    def __init__(self: Self, message: str = "NTPTime Error") -> None:
+    def __init__(self, message: str = "NTPTime Error") -> None:
         self.message = message
         super().__init__(self.message)
 
@@ -168,7 +168,7 @@ class NTPAllServersFailError(NTPError):
 
 
 class NoInternetError(NTPError):
-    def __init__(self: Self, message: str = "This device does not appear to have a working internet connection") -> None:
+    def __init__(self, message: str = "This device does not appear to have a working internet connection") -> None:
         self.message = message
         super().__init__(self.message)
 
@@ -193,10 +193,6 @@ class ConfigNotFoundError(ConfigError):
     def __init__(self, message=None):
         self.message = message if message else f"{self.__class__.__name__!s} Error - check 'mfa config debug'"
         super().__init__(self.message)
-
-
-class EncryptionError(MFAwesomeError):
-    pass
 
 
 class MaxPasswordAttemptsError(ConfigError):

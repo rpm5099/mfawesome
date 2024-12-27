@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import hashlib
@@ -20,7 +19,6 @@ import rich.text
 from rich import print as rprint
 from rich.text import Text
 
-from mfawesome import ntptime
 from mfawesome.config import ConfigIO, FilterSecrets, LoadNTPServers, SearchSecrets
 from mfawesome.countdownbars import Countdown, CountdownBar, CountdownBars, DoubleCountdown, ProgBar
 from mfawesome.exception import (
@@ -33,6 +31,7 @@ from mfawesome.exception import (
     NTPInvalidServerResponseError,
     getExceptionNameError,
 )
+from mfawesome.ntptime import CorrectedTime
 from mfawesome.utils import (
     HIDE_CURSOR,
     PRINT,
@@ -60,19 +59,25 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("mfa")
 
-# TIMESERVERS = LoadNTPServers()
-NTPO = ntptime.NTPTime(updatenow=False, timeservers=LoadNTPServers())
+NTPCT = None
 
 
-def totpcalc(ntpo: ntptime.NTPTime, secret: str, time_offset: float = 0.0) -> tuple[str, float]:
+def init(timeservers):
+    global NTPCT
+    NTPCT = CorrectedTime(timeservers)
+
+
+def totpcalc(secret: str, period_offset: int = 0) -> tuple[str, float]:
     """2fa"""
     secret = secret.replace("\t", "")
-    tm = int(time.time() / 30)
-    ts = ntpo.ts + time_offset
-    tm = ts / 30.0
-    time_remaining = (30.0 + time_offset) - (ts % 30.0)
+    # tm = int(time.time() / 30)
+    # ts = ntpo.ts + time_offset
+    # tm = ts / 30.0
+    # time_remaining = (30.0 + time_offset) - (ts % 30.0)
+    ts = NTPCT.time + (30.0 * period_offset)
+    periodnum = int(ts / 30.0)
     key = b32decode(secret.upper())
-    b = struct.pack(">q", int(tm))
+    b = struct.pack(">q", int(periodnum))
     hm = hmac.HMAC(key, b, hashlib.sha1).digest()
     offset = hm[-1] & 0x0F
     truncatedHash = hm[offset : offset + 4]
@@ -80,10 +85,10 @@ def totpcalc(ntpo: ntptime.NTPTime, secret: str, time_offset: float = 0.0) -> tu
     code &= 0x7FFFFFFF
     code %= 1000000
     final = str(code).zfill(6)
-    return final, time_remaining
+    return final, RemainingTime(period_offset)
 
 
-def multitotpcalc(ntpo: ntptime.NTPTime, secret: str, codecount: int = 2) -> tuple[str, float]:
+def multitotpcalc(secret: str, codecount: int = 2) -> tuple[str, float]:
     """2fa"""
     TOTPCode = namedtuple(
         "TOTPCode",
@@ -91,13 +96,9 @@ def multitotpcalc(ntpo: ntptime.NTPTime, secret: str, codecount: int = 2) -> tup
     )
     codes = []
     for i in range(codecount):
-        to = 30.0 * i
-        code, remaining = totpcalc(ntpo, secret=secret, time_offset=to)
+        code, remaining = totpcalc(secret, period_offset=i)
         uv = remaining - 30.0
-        validstamp = gettime(seconds_offset=to)
-        if uv <= 0:
-            validstamp = "NOW"
-        TCode = TOTPCode(code, remaining, uv, gettime(seconds_offset=to))
+        TCode = TOTPCode(code, remaining, uv, gettime(NTPCT.time))
         codes.append(TCode)
     return codes
 
@@ -190,12 +191,8 @@ def runhotp(
     console.print(tfatable)
 
 
-def RemainingTime(ntpo: ntptime.NTPTime, timeservers: list | None = None) -> float:
-    """Calculate remaining time"""
-    ntpo.UpdateTime(timeservers=timeservers)
-    ts = ntpo.ts
-    # logger.debug(f"Local Timestamp: {gettime()}; NTPTime: {ntpo!s}; Remaining Time: {float(30 - (ts % 30))}")
-    return float(30.0 - (ts % 30.0))
+def RemainingTime(period_offset: int = 0) -> float:
+    return float(30.0 - (NTPCT.time % 30)) + (30.0 * period_offset)
 
 
 @dataclass
@@ -314,7 +311,7 @@ class TFAResults:
         self.now = now
         self.timeservers = timeservers
         # self.ntpo = ntptime.NTPTime(updatenow=False)
-        self.ntpo = NTPO
+        self.ntpo = NTPCT
         self.remaining = 0.0
         self.console = rich.console.Console()
         self.tfatable = rich.table.Table(
@@ -391,7 +388,7 @@ class TFAResults:
             self.tfatable.add_row(*result.get_fields_as_tuple(fields))
         try:
             # logger.debug(f"{RemainingTime(self.ntpo)=} {self.remaining=}")
-            self.remaining = RemainingTime(self.ntpo, timeservers=self.timeservers)
+            self.remaining = RemainingTime()
             # logger.debug(f"{self.remaining=} {self.mintime=} {self.now=}")
             if self.remaining < self.mintime:
                 if self.now is False:
@@ -429,7 +426,7 @@ class TFAResults:
 
 def multitotp(
     secrets: dict,
-    ntpo: ntptime.NTPTime | None = None,
+    # ntpo: ntptime.NTPTime | None = None,
     now: bool = False,
     showsecrets: bool = False,
     endtimer: bool = True,
@@ -466,7 +463,7 @@ def multitotp(
     :return: Nothing
     :rtype: None
     """
-    ntpo = NTPO
+    init(timeservers)
     secrets = SearchSecrets(filterterm, secrets, exact=exact)
     secrets = FilterSecrets(secrets)
     names = sorted(secrets.keys(), key=str.casefold)
@@ -475,7 +472,7 @@ def multitotp(
     if len(names) == 0:
         printerr("No matching secrets found!")
         return None
-    rt = RemainingTime(ntpo, timeservers=timeservers)
+    rt = RemainingTime()
     logger.debug(f"{rt=} {mintime=} {now=}")
     if rt < mintime and now is False:
         Countdown(f"Waiting for new codes:", rt + 1)
@@ -497,7 +494,7 @@ def multitotp(
         nextcode = ""
         try:
             if totp:
-                codes = multitotpcalc(ntpo, totp, codecount=2)
+                codes = multitotpcalc(totp, codecount=2)
                 thiscode = codes[0]
                 code = thiscode.code
                 thenextcode = codes[1]
@@ -537,7 +534,6 @@ def multitotp(
 
 def multitotp_continuous(
     secrets: dict,
-    ntpo: ntptime.NTPTime | None = None,
     timelimit: int = 90,
     showsecrets: bool = False,
     # timeserver: str | None = None,
@@ -566,9 +562,9 @@ def multitotp_continuous(
     :type exact: bool, optional
     :raises KILLED: _description_
     """
+    init(timeservers)
     tstart = time.time()
-    ntpo = NTPO
-    remaining = RemainingTime(ntpo, timeservers=timeservers)
+    remaining = RemainingTime()
     try:
         while time.time() - tstart < timelimit:
             remaining = multitotp(

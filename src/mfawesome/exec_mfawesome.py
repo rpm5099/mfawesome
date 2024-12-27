@@ -14,7 +14,7 @@ import traceback
 from contextlib import suppress
 from pathlib import Path
 from pprint import pformat, pprint
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NoReturn
 
 with suppress(Exception):
     import argcomplete
@@ -60,7 +60,6 @@ from mfawesome.utils import (
     SHOW_CURSOR,
     ANSIColors,
     CheckFile,
-    CheckQRImportSupport,
     ErrorExitCleanup,
     IsIPython,
     PathEx,
@@ -132,11 +131,11 @@ def AddRunOnlyArgs(parser):
 
 
 class ErrorCatchingArgumentParser(argparse.ArgumentParser):
-    def exit(self, status=0, message=None):
+    def exit(self, status=0, message=None) -> NoReturn:
         if status:
             raise ArgumentErrorIgnore(f"Invalid arguments for RunParser: {message}")
 
-    def print_usage(self, _discard):
+    def print_usage(self, file):
         return
 
 
@@ -150,8 +149,6 @@ def RunParser(rawargs):
     parser = AddAlwaysArgs(parser)
     # Run only args
     parser = AddRunOnlyArgs(parser)
-    if "argcomnplete" in globals():
-        argcomplete.autocomplete(parser)
     try:
         args = parser.parse_args(rawargs)
     except ArgumentErrorIgnore as e:
@@ -164,6 +161,7 @@ def RunParser(rawargs):
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
     maincmds = ["run", "config", "secrets", "version", "hotp"]
+    args = None
     if not any([x in rawargs for x in ["-h", "--help"]]):
         try:
             args = RunParser(rawargs)
@@ -318,8 +316,8 @@ def Run(args):
         if args.showsecrets:
             printwarn("WARNING: Enabled showing secrets - this will reveal sensitive information on your screen!")
         secrets = configio.config["secrets"]
-        timeserver = configio.config.get("timeserver", None)
-        timeserver = timeserver if timeserver else config.LoadNTPServers()
+        # timeserver = configio.config.get("timeserver", None)
+        # timeserver = timeserver if timeserver else config.LoadNTPServers()
         if args.continuous:
             totp.multitotp_continuous(
                 secrets,
@@ -329,7 +327,7 @@ def Run(args):
                 filterterm=args.filterterm,
                 clearscreen=not args.noclearscreen,
                 exact=args.exact,
-                timeservers=timeserver,
+                timeservers=configio.timeserver,
             )
         else:
             totp.multitotp(
@@ -341,7 +339,7 @@ def Run(args):
                 filterterm=args.filterterm,
                 clearscreen=not args.noclearscreen,
                 exact=args.exact,
-                timeservers=timeserver,
+                timeservers=configio.timeserver,
             )
         MFAExit()
 
@@ -455,10 +453,6 @@ def main(rawargs: list | tuple | None = None):
 
         if args.secrets_command == "import":
             with ConfigIORunWrapper(args, validate_config=False) as configio:
-                qrsupport, err = CheckQRImportSupport()
-                logger.debug(f"QR Support result: {qrsupport=} {err=}")
-                if not qrsupport:
-                    raise QRImportNotSupportedError
                 newsecrets = LoadQRSecrets(configio._config["secrets"], qrdir=args.importdir, skipconfirm=args.test)
                 configio.AddSecrets(newsecrets)
             return MFAExit()

@@ -10,7 +10,7 @@ import sys
 import textwrap
 from collections.abc import Callable
 from contextlib import suppress
-from typing import TYPE_CHECKING, Self
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import AnyStr, Optional, Tuple
@@ -27,9 +27,7 @@ from mfawesome.mfa_secrets import (
     ScryptChacha20Poly1305,
     bytify,
 )
-
-with suppress(ImportError, ModuleNotFoundError, DependencyMissingError):
-    from mfawesome.qrcodes import ImportFromQRImage  # , Init_Otpauth_Migration, ScanQRDir
+from mfawesome.qrcodes import ImportFromQRImage
 from mfawesome.utils import (
     FF,
     CheckFile,
@@ -416,7 +414,7 @@ def FilterSecrets(secrets: dict) -> dict:
 
 def SearchSecrets(filterterms: str | list, secrets: dict, exact: bool = False, slackfactor: float = 1.4, cutoff: float = 0.55) -> list:
     """
-    slackfactor - LOWER means closer match
+    Slackfactor - LOWER means closer match
     cutoff - HIGHER means closer match (default for lib function is 0.4)
     """
     if filterterms in [None, [], ""]:
@@ -498,11 +496,15 @@ class ConfigIO:
         self.config = ValidateConfig(self.config)
         self.secretscount = len(FilterSecrets(self.config["secrets"]))
         self._configbackup = self.config
+        self.timeserver = self.config.get("timeserver", None)
+        if self.timeserver is None:
+            self.timeserver = 10
+        self.timeserver = list(filter(lambda x: x != "", self.timeserver.split(":")))
 
-    def ValidateArgs(self) -> bool:
-        if self.permanent is False and self.writedecrypted is True:
-            raise ConfigError(f"ConfigIO Error: Write decrypted config flag set but permanent flag is not.")
-        return True
+    # def ValidateArgs(self) -> bool:
+    #     if self.permanent is False and self.writedecrypted is True:
+    #         raise ConfigError(f"ConfigIO Error: Write decrypted config flag set but permanent flag is not.")
+    #     return True
 
     @property
     def config(self) -> str:
@@ -513,13 +515,15 @@ class ConfigIO:
         self._config = copy.deepcopy(newconfig)
 
     def LoadConfig(self) -> Optional[str]:
+        config = None
         if not self.config:
             raise ConfigNotFoundError("Config appears blank!")
-        if not CheckSecretsEncrypted(self.config["secrets"]):
+        secretsencrypted = CheckSecretsEncrypted(self.config["secrets"])
+        if not secretsencrypted:
             printwarn(
                 f"Your secrets are not encrypted (or there are none entered).  Secrets can be added to your config file at {self.configfile!s}\n\tStrongly consider protecting them by using 'mfa --encryptsecrets', especially if this is not a machine you fully control.",
             )
-        if CheckSecretsEncrypted(self.config["secrets"]) is True and self.decrypt:
+        if secretsencrypted is True and self.decrypt:
             for i in range(self.maxtries):
                 if i > 0:
                     self.ipassword = GetPassword(getpassmsg=self.getpassmsgstr, verify=False, keylogprot=self._rawconfig.get("keylogprot", False))
@@ -560,11 +564,11 @@ class ConfigIO:
         config = copy.deepcopy(self.config)
         if filterterm:
             printcrit("filtering secrets")
-            config["secrets"] = SearchSecrets(filterterm, config["secrets"], exact=exact)
+            config["secrets"] = SearchSecrets(filterterm, config["secrets"], exact=exact)  # type: ignore
             printcrit(config["secrets"])
         self.ipassword = GetPassword(getpassmsg="Exported MFAwesome Password", verify=True, keylogprot=self._rawconfig.get("keylogprot", False))
         config = self.EncryptConfig(force=True, config=config)
-        config["keylogprotection"] = True
+        config["keylogprotection"] = True  # type: ignore
         WriteConfigFile(exportfile, config)
         printok(f"MFAwesome config file exported to {exportfile!s}")
 
@@ -597,7 +601,7 @@ class ConfigIO:
             self.ipassword = GetPassword(getpassmsg, verify=True, keylogprot=self._rawconfig.get("keylogprot", False))
         config = self.EncryptConfig(verify=verify, force=True)
         if keylogprot:
-            config["keylogprotection"] = True
+            config["keylogprotection"] = True  # type: ignore
         WriteConfigFile(outfilename, config)
         printok(f"Config file {outfilename} written encrypted!")
 
@@ -612,7 +616,7 @@ class ConfigIO:
         scpcrypt = ScryptChacha20Poly1305(self.ipassword)
         encrypted_secrets = "".join(encrypted_secrets).encode()
         decrypted_secrets = json.loads(gzip.decompress(scpcrypt.Decrypt(encrypted_secrets)))
-        configcopy["secrets"] = decrypted_secrets
+        configcopy["secrets"] = decrypted_secrets  # type: ignore
         logger.debug(f"{len(decrypted_secrets)} Secrets successfully decrypted")
         return configcopy
 
@@ -688,7 +692,7 @@ class ConfigIO:
         logger.debug("Config secrets encrypted!")
         return configcopy
 
-    def __enter__(self) -> Self:
+    def __enter__(self):
         return self
 
     def __exit__(self, _exception_type, _exception_value, _exception_traceback) -> None:

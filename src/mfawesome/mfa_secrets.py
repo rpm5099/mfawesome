@@ -13,21 +13,12 @@ import random
 import secrets
 import string
 import sys
-from typing import (
-    Any,
-    AnyStr,
-    Literal,
-    LiteralString,
-    Self,
-    TypeVar,
-    Union,
-)
+from typing import TypeVar
 
 import cryptography.exceptions
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
 from cryptography.hazmat.primitives.kdf.scrypt import Scrypt
 
-from mfawesome import config
 from mfawesome.exception import (
     ConfigError,
     Cryptography_Exceptions,
@@ -40,7 +31,7 @@ from mfawesome.exception import (
     xTestComplete,
     xTestFailError,
 )
-from mfawesome.utils import IsIPython, PrintStack, bytify, clear_output_line, clear_previous_line, colors, logprint, printcrit, printdbg, printerr, printok, printwarn, stripcolors
+from mfawesome.utils import IsIPython, bytify, colors, printcrit, printdbg, printerr, printok, printwarn, stripcolors
 
 logger = logging.getLogger("mfa")
 
@@ -287,7 +278,7 @@ class ScryptChacha20Poly1305:
 
     @bytify
     @classmethod
-    def Create(cls: type[T], password: bytes) -> Self:
+    def Create(cls: type[T], password: bytes):
         """
         Creates a new instance of the class with all of the same parameters except that
         the password can be changed.

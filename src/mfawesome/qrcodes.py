@@ -43,16 +43,16 @@ from mfawesome.utils import (
     printwarn,
 )
 
+# https://docs.opencv.org/4.x/
+# https://docs.opencv.org/4.x/dd/d63/group__wechat__qrcode.html
+
 if TYPE_CHECKING:
     from pathlib import Path
 
     import google
 
-with suppress(ImportError, ModuleNotFoundError):
-    from qreader import QReader
-
 if IsIPython():
-    from IPython import get_ipython
+    from IPython import get_ipython  # type: ignore
     from IPython.display import HTML, clear_output, display
 
 logger = logging.getLogger("mfa")
@@ -210,27 +210,9 @@ def ParseQRUrl(otpauth_migration_url: str, nodecode: bool = False) -> list:
     return results
 
 
-@SuppressAllOutput
-def RawQRRead(filename: str | Path) -> list:
-    filename = str(PathEx(filename))
-    img = cv2.cvtColor(cv2.imread(filename), cv2.COLOR_BGR2RGB)
-    qreader = QReader()
-    return qreader.detect_and_decode(image=img)
-
-
-def ScanQRImage(filename: str | Path) -> tuple:
-    filename = PathEx(filename)
-    try:
-        qrdata = RawQRRead(filename)
-    except cv2.error as e:
-        printwarn(f"Warning: Unable to extract QR images from {filename}, skipping.")
-        return None
-    return qrdata
-
-
 def DisplayRawQR(filename: str | Path) -> None:
     try:
-        qrdata = RawQRRead(filename)
+        qrdata = ScanQRImage(filename)
         for entry in qrdata:
             try:
                 rprint(ParseQRUrl(entry, nodecode=False))
@@ -241,9 +223,20 @@ def DisplayRawQR(filename: str | Path) -> None:
                 except Exception as e1:
                     logger.debug(f"QRRead exception: {e1!r}")
     except Exception as e2:
-        printerr(f"Failed to read QR image: {filename!s}")
+        printerr(f"Failed to read QR image: {filename!s} _ {e2!r}")
         if logger.level == 10:
             traceback.print_exception(e2)
+
+
+def ScanQRImage(filename: str | Path) -> tuple[str]:
+    try:
+        qrdata = cv2.imread(str(filename))
+        detector = cv2.wechat_qrcode_WeChatQRCode()
+        res, points = detector.detectAndDecode(qrdata)
+    except Exception as e:
+        raise QRScanError(f"Exception scanning {filename!s}") from e
+    else:
+        return res
 
 
 def ScanQRDir(qrdir: str | Path) -> dict:
@@ -408,7 +401,7 @@ def QRExport(secrets: dict, exportdir: str | Path | None = None, max_secrets_per
     for fn in qrfiles:
         tab = "\t"
         printok(f"{tab}{fn!s}")
-    printwarn(f"XXXXRemember to delete the exported qr codes - the images are located in: {exportdir.resolve()!s}")
+    printwarn(f"Remember to delete the exported qr codes - the images are located in: {exportdir.resolve()!s}")
     return qrfiles
 
 

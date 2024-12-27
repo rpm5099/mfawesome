@@ -28,7 +28,7 @@ from mfawesome.logutils import SetupLogging
 with suppress(ImportError, ModuleNotFoundError, DependencyMissingError):
     from mfawesome.qrcodes import AuthSecret, ConvertAuthSecretsToDict, ParseQRUrl, QRExport, ScanQRDir, ScanQRImage
 
-from mfawesome.utils import CheckQRImportSupport, FastInternetCheck, PathEx, colors
+from mfawesome.utils import FastInternetCheck, PathEx, colors
 
 # ruff: noqa: S101
 
@@ -51,6 +51,19 @@ logger = logging.getLogger("mfa")
 logger = SetupLogging(level=TESTLOGLEVEL)
 
 
+def rmtree(f: Path, missing_ok: bool = False):
+    if f.is_file():
+        f.unlink()
+    elif f.is_dir():
+        for child in f.iterdir():
+            rmtree(child)
+        f.rmdir()
+    else:
+        if missing_ok:
+            return
+        raise OSError(f"Directory does not exist: {f!s}")
+
+
 def print_test_msg(msg: str | None = None, pdelim: bool = False) -> None:
     delim = colors("PURPLE", "=" * 80)
     if pdelim:
@@ -69,7 +82,6 @@ def dumpconfig() -> None:
 
 
 def are_secrets_encrypted(configfile: str | Path) -> bool:
-    # return config.CheckSecretsEncrypted(config.LoadConfig()[1]["secrets"])
     return config.CheckSecretsEncrypted(config.Readyaml(configfile)["secrets"])
 
 
@@ -98,15 +110,6 @@ def SetupTestMode():
         raise RuntimeError("Environment variables for MFAwesome must be set for testing")
 
 
-def test_checkqrsupport():
-    exc = None
-    try:
-        CheckQRImportSupport()
-    except Exception as e:
-        exc = e
-    assert exc is None
-
-
 def test_checkinternet():
     assert FastInternetCheck()
 
@@ -119,7 +122,8 @@ def test_generateconfig():
         mfarun(runargs.split())
     except Exception as e:
         exc = e
-    assert exc is None
+    result = exc is None
+    assert result
 
 
 def test_encryptconfig():
@@ -168,8 +172,8 @@ def test_exportconfig():
     result = are_secrets_encrypted(exportfile) and exc is None
     if exportfile.exists():
         exportfile.unlink()
-    if MFACONF.exists():
-        MFACONF.unlink()
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
     assert result
 
 
@@ -186,8 +190,8 @@ def test_changepassword():
     except Exception as e:
         exc = e
     result = are_secrets_encrypted(MFACONF) and exc is None
-    if MFACONF.exists():
-        MFACONF.unlink()
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
     assert result
 
 
@@ -199,7 +203,8 @@ def test_generatesecret():
         mfarun(runargs.split())
     except Exception as e:
         exc = e
-    assert exc is None
+    result = exc is None
+    assert result
 
 
 def test_searchsecrets():
@@ -213,9 +218,10 @@ def test_searchsecrets():
         mfarun(runargs.split())
     except Exception as e:
         exc = e
-    if MFACONF.exists():
-        MFACONF.unlink()
-    assert exc is None
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
+    result = exc is None
+    assert result
 
 
 def test_printconfig():
@@ -228,9 +234,10 @@ def test_printconfig():
         mfarun(runargs.split())
     except Exception as e:
         exc = e
-    if MFACONF.exists():
-        MFACONF.unlink()
-    assert exc is None
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
+    result = exc is None
+    assert result
 
 
 def test_addsecret():
@@ -247,8 +254,8 @@ def test_addsecret():
     except Exception as e:
         exc = e
     result = secretname in ReadConfigFile(MFACONF)["secrets"]  # set(cfgc["secrets"].keys())
-    if MFACONF.exists():
-        MFACONF.unlink()
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
     assert result
 
 
@@ -267,8 +274,8 @@ def test_removesecret():
     cfgc = copy.deepcopy(EXAMPLE_CONFIG)
     cfgc["secrets"].pop(secretname)
     result = set(cfgc["secrets"].keys()) == set(ReadConfigFile(MFACONF)["secrets"].keys())
-    if MFACONF.exists():
-        MFACONF.unlink()
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
     assert result
 
 
@@ -282,9 +289,10 @@ def test_hotp():
         mfarun(runargs)
     except Exception as e:
         exc = e
-    if MFACONF.exists():
-        MFACONF.unlink()
-    assert exc is None
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
+    result = exc is None
+    assert result
 
 
 def test_qrexport():
@@ -302,13 +310,10 @@ def test_qrexport():
         MFACONF.unlink()
     if imagedir.is_dir():
         shutil.rmtree(imagedir)
-    assert exc is None
+    result = exc is None
+    assert result
 
 
-qsupport, err = CheckQRImportSupport()
-
-
-@pytest.mark.skipif(not qsupport, reason="QR Import support not available: {err!r}")
 def test_qrimport():
     SetupTestMode()
     imagedir = PathEx("/tmp/testsecrets")
@@ -331,8 +336,8 @@ def test_qrimport():
     except Exception as e:
         exc = e
     result = secretname in ReadConfigFile(MFACONF)["secrets"] and exc is None
-    if MFACONF.exists():
-        MFACONF.unlink()
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
     if imagedir.is_dir():
         shutil.rmtree(imagedir)
 
@@ -349,6 +354,7 @@ def test_runnormal():
         mfarun(runargs.split())
     except Exception as e:
         exc = e
-    if MFACONF.exists():
-        MFACONF.unlink()
-    assert exc is None
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
+    result = exc is None
+    assert result
