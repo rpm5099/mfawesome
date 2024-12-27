@@ -44,11 +44,7 @@ def ReverseDNS(ip, dnstimeout=0.5, nameservers=None):
         return ", ".join([str(x).strip(".") for x in ptranswsers.rrset])
 
 
-#################
-
-
 REF_TIME_1970 = 2208988800
-# PUBLIC_TIME_SERVERS: list = ["time.google.com", "time.cloudflare.com", "time.windows.com", "time.nist.gov"]
 
 LEAP_TABLE: dict = {
     0: "no warning",

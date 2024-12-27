@@ -1,14 +1,10 @@
 #!/usr/bin/env python3
-# PYTHON_ARGCOMPLETE_OK
 from __future__ import annotations
 
 import argparse
 import json
 import logging
-import os
 import pathlib
-import shutil
-import subprocess
 import sys
 import traceback
 from contextlib import suppress
@@ -32,59 +28,20 @@ from mfawesome import (
     config,
     exception,
     logutils,
-    mfa_secrets,
-    ntptime,
-    qrcodes,
     totp,
 )
-from mfawesome.config import ConfigDebug, ConfigIO, FilterSecrets, GenerateDefaultConfig, LoadNTPServers, LoadQRSecrets, LocateConfig, PrintConfig, SearchSecrets, TestCheck
+from mfawesome.config import ConfigIO, FilterSecrets, GenerateDefaultConfig, LoadQRSecrets, PrintConfig, SearchSecrets
 from mfawesome.exception import (
-    KILLED,
     ArgumentError,
     ArgumentErrorIgnore,
     ConfigError,
-    ConfigNotFoundError,
-    DependencyMissingError,
     MFAwesomeError,
     QRImportNotSupportedError,
-    ScreenResizeError,
-    ScreenSafe,
-    StopIPython,
-    xTestFailError,
 )
-from mfawesome.logutils import NormalizeLogLevel, SetLoggingLevel, SetupLogging
 from mfawesome.mfa_secrets import GenerateSecret
 from mfawesome.qrcodes import DisplayRawQR, QRExport
-from mfawesome.totp import multitotp, multitotp_continuous, runhotp
-from mfawesome.utils import (
-    SHOW_CURSOR,
-    ANSIColors,
-    CheckFile,
-    ErrorExitCleanup,
-    IsIPython,
-    PathEx,
-    PathExFile,
-    PrintList,
-    PrintStack,
-    check_yes_no,
-    colors,
-    flatten,
-    jsondump,
-    print_with_sep_line,
-    printcrit,
-    printdbg,
-    printerr,
-    printnorm,
-    printok,
-    printwarn,
-    sjoin,
-)
-
-with suppress(ImportError, ModuleNotFoundError, exception.DependencyMissingError):
-    from mfawesome.qrcodes import ImportFromQRImage
-
-if TYPE_CHECKING:
-    from pathlib import Path
+from mfawesome.totp import runhotp
+from mfawesome.utils import SHOW_CURSOR, CheckFile, IsIPython, PathEx, PathExFile, check_yes_no, colors, jsondump, printcrit, printerr, printnorm, printok, printwarn, suppress_stderr_stdout
 
 logger = logging.getLogger("mfa")
 
@@ -126,7 +83,6 @@ def AddRunOnlyArgs(parser):
     parser.add_argument("-E", "--showerr", action="store_true", help="Show errors getting and parsing codes")
     parser.add_argument("-t", "--timelimit", type=float, default=90.0, help="Length of time to show codes continuously (Default 90.0 seconds)")
     parser.add_argument("-N", "--noendtimer", action="store_true", help="Disable countdown timer for codes, N/A for --continuous")
-    # parser.add_argument("-H", "--hotp", action="store_true", help="Calculate HOTP codes, using a filterterm if supplied.  Counters will be incremented in the config")
     return parser
 
 
@@ -152,7 +108,7 @@ def RunParser(rawargs):
     try:
         args = parser.parse_args(rawargs)
     except ArgumentErrorIgnore as e:
-        logger.debug(f"Got error running RunParser, falling back to full parsing mode: {type(e)=} {e!r}")
+        logger.debug(f"RunParser not implied by arguments, falling back to full parsing mode: {type(e)=} {e!r}")
         return None
     logger.debug(f"Run parser result: {args}")
     return args
@@ -160,7 +116,7 @@ def RunParser(rawargs):
 
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
-    maincmds = ["run", "config", "secrets", "version", "hotp"]
+    maincmds = ["run", "config", "secrets", "version", "hotp", "test"]
     args = None
     if not any([x in rawargs for x in ["-h", "--help"]]):
         try:
@@ -189,6 +145,9 @@ def Parse_Args(rawargs):
 
     # version parser
     versionparser = subparsers.add_parser("version", help="Show version and exit")
+
+    # test parser
+    testparser = subparsers.add_parser("test", help="Run MFAwesome tests via pytests")
 
     # HOTP parser
     hotpparser = subparsers.add_parser("hotp", help="Display HOTP codes")
@@ -482,9 +441,21 @@ def main(rawargs: list | tuple | None = None):
         Run(args)
         MFAExit()
 
-    if not args.test:
-        printcrit(f"{args.mfa_command} not implemented!")
-        raise MFAwesomeError("We really shouldnt get here")
+    if args.mfa_command == "test":
+        printnorm("Running MFAwesome tests...")
+        try:
+            import pytest
+        except ModuleNotFoundError as e:
+            printerr("The pytest package must be installed to run test - 'pip install pytest'")
+            return 1
+
+        result = pytest.main(["tests/test_mfawesome.py"])
+        if result != 0:
+            printerr(f"MFAwesome tests failed - see pytest output for details")
+            return result
+        printok("All MFAwesome tests passed!")
+        return result
+
     return 0
 
 

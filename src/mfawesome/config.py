@@ -6,10 +6,8 @@ import gzip
 import json
 import logging
 import os
-import sys
 import textwrap
 from collections.abc import Callable
-from contextlib import suppress
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -20,20 +18,17 @@ from pathlib import Path
 import rich.pretty
 import yaml
 
-from mfawesome.exception import ConfigError, ConfigNotFoundError, DependencyMissingError, EncryptionError, IncorrectPasswordOrSaltError, MFAwesomeError
+from mfawesome.exception import ConfigError, ConfigNotFoundError, EncryptionError, IncorrectPasswordOrSaltError, MFAwesomeError
 from mfawesome.logutils import NormalizeLogLevel
 from mfawesome.mfa_secrets import (
     GetPassword,
     ScryptChacha20Poly1305,
-    bytify,
 )
 from mfawesome.qrcodes import ImportFromQRImage
 from mfawesome.utils import (
-    FF,
     CheckFile,
     IncrementToDeconflict,
     PathEx,
-    PrintStack,
     ValidateB32,
     bytifykw,
     check_yes_no,
@@ -41,7 +36,6 @@ from mfawesome.utils import (
     fix_b32decode_pad,
     get_close_matches,
     makestr,
-    print_sep_line,
     print_with_sep_line,
     printcrit,
     printerr,
@@ -178,7 +172,7 @@ def LoadQRSecrets(secrets: dict, qrdir: str, skipconfirm: bool = True) -> dict:
     for name, sdata in otpauths.items():
         scode = sdata.get("totp") or sdata.get("hotp")
         if scode and scode in current_secrets:
-            logger.error(f"The secret for '{name}' is alredy in current secrets {scode}.  This secret will not be added!")
+            logger.warning(f"The secret for '{name}' is alredy in current secrets {scode}.  This secret will not be added!")
             continue
         if name in current_names:
             _name = IncrementToDeconflict(name, current_names)
@@ -239,8 +233,6 @@ def GenerateDefaultConfig(configfile: str | Path | None = None, example: bool = 
     if os.environ.get("MFAWESOME_TEST") == "1":
         example = True
     config = EXAMPLE_CONFIG if example else DEFAULT_CONFIG
-    # if configfile is None:
-    #    configfile = Path(os.environ["MFAWESOME_CONFIG"]) if "MFAWESOME_CONFIG" in os.environ else Path.home() / ".config/mfawesome/mfawesome.conf"
     configfile = Path(configfile)
     if configfile.exists():
         raise ConfigError(f"Proposed config file already exists: {configfile}.  To specify a different location add a filename parameter - 'mfa --generateconfig /some/path/mfawesome.conf'")
@@ -379,13 +371,14 @@ def ReadConfigFile(fname: str | Path | None = None, testmode: bool = False) -> A
 
         traceback.print_stack()
         raise ConfigNotFoundError(f"READCONFIGFFILE The config file {fname!s} does not exist")
-    Path.chmod(fname, 0o600)
+    fname.chmod(0o600)
     return Readyaml(fname)
 
 
 def WriteConfigFile(fname: str | Path, config: dict) -> None:
+    fname = PathEx(fname)
     Writeyaml(fname, config)
-    Path.chmod(fname, 0o600)
+    fname.chmod(0o600)
 
 
 def FormatSecrets(secrets: dict) -> dict:
@@ -500,11 +493,6 @@ class ConfigIO:
         if self.timeserver is None:
             self.timeserver = 10
         self.timeserver = list(filter(lambda x: x != "", self.timeserver.split(":")))
-
-    # def ValidateArgs(self) -> bool:
-    #     if self.permanent is False and self.writedecrypted is True:
-    #         raise ConfigError(f"ConfigIO Error: Write decrypted config flag set but permanent flag is not.")
-    #     return True
 
     @property
     def config(self) -> str:
@@ -724,7 +712,6 @@ def PrintConfig(config: dict | None = None) -> None:
 def LoadNTPServers(ntpservers: AnyStr | None = None) -> list[str] | None:
     if ntpservers is None:
         ntpservers = Path(__file__).parent / Path("data/ntpservers.yaml")
-    # logger.debug(f"NTP servers data file: {ntpservers}")
     if CheckFile(ntpservers):
         return list(filter(None, Readyaml(Path.resolve(ntpservers))["NTPSERVERS"]))
     raise FileNotFoundError(f"The file {ntpservers} was not found!")
@@ -732,5 +719,4 @@ def LoadNTPServers(ntpservers: AnyStr | None = None) -> list[str] | None:
 
 def GetConfig() -> dict:
     with ConfigIO(decrypt=True) as cfg:
-        # return json.dumps(cfg.config, indent=4)
         return cfg.config

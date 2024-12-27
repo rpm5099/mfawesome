@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 import platform
 import sys
-from contextlib import suppress
 from typing import TYPE_CHECKING
 
 import cryptography.exceptions
@@ -117,7 +116,6 @@ def flatten(*lst: list, sep: str = " ") -> str:
 
 
 def printerr(s):
-    #    self.critstart = "\x1b[0;0;39m\x1b[0;37;41m"
     boldredstart = "\x1b[1m\x1b[38;5;196m"
     reset = "\x1b[0;0;39m"
     print(boldredstart + flatten(s) + reset)

@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "mfawesome"
-version = "0.1.61"
+version = "0.1.63"
 description = "CLI Multi-Factor Authenticator Tool"
 authors = ["Rob Milloy <rob@milloy.net>"]
 readme = "README.md"
@@ -10,7 +10,7 @@ repository = "https://github.com/rpm5099/mfawesome"
 keywords = ["totp", "hotp", "2fa", "mfa", "cli"]
 
 [tool.poetry.dependencies]
-python = ">= 3.11,< 4.0"
+python = ">= 3.10,< 4.0"
 rich = "*"
 PyYAML = "*"
 numpy = "*"
