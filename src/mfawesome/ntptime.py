@@ -312,7 +312,7 @@ def PooledNTPTime(pool: int | list | set | tuple = 10, timeout: float = 1.0):
             return result
 
     if not pool:
-        logger.warning(f"Invalid value for timeserver pool passed to PooledNTPTime, ignoring.  {pool=}")
+        logger.debug(f"Invalid value for timeserver pool passed to PooledNTPTime, ignoring.  {pool=}")
         pool = 10
 
     if isinstance(pool, int):

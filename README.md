@@ -11,14 +11,9 @@
 
 **MFAwesome** (MFA) is an open-source system cross-platform command line based multifactor authentication tool. It allows secure storage of your TOTP and HOTP secrets in a simple config file that can be exported for use even on systems you do not trust. It allows importing secrets via Google Authenticator QR codes.
 
-MFA provides keylogger protection, fuzzy matching on secret names, multiple encryption options and automatic synchronization via public NTP servers (custom NTP sever can be set in the config). It is faster and easier for those accustomed to CLI than using an app on your phone. 
+MFA provides keylogger protection, fuzzy matching on secret names, multiple encryption options and automatic synchronization via public NTP servers (custom NTP sever can be set in the config). It is faster and easier for those accustomed to CLI than using an app on your phone.
 
 The bottom line is this: if both of your two factor authentication methods are available on your mobile device the second factor provides no security against an attacker with access to it.  
-
-
-| :zap:  NOTE |
-| ----------- |
-Due to the large size of the dependencies required for python's [qreader](https://pypi.org/project/qreader/) package it is only installed by specifying  `pip install mfawesome[all]`. However without `qreader` you will not be able to import secrets via qrcodes.
 
 # Preview
 
@@ -41,16 +36,12 @@ Python Libraries `pip install mfawesome`:
 - `cryptography` (Secrets encryption)
 - `numpy` (math)
 - `protobuf` (Google Authenticator QR Generation)
-- `opencv-python` (Google Authenticator QR Generation)
+- `opencv-contrib-python-headless` (Google Authenticator QR Generation, QR Reading)
 - `qrcode[pil]` (QR Code Generation)
-
-`pip install mfawesome[all]` Optional dependencies:
-
-- `qreader` (QR Code Import)  *Note: This package has a large amount of dependencies*
 
 | :zap:  NOTE |
 | ----------- |
-On Linux `libzbar0` is required to read QR codes - `sudo apt install libzbar0` or `sudo dnf install libzbar0`.  On Windows you may need to install [vcredist_x64.exe](https://www.microsoft.com/en-gb/download/details.aspx?id=40784).  See the [QReader homepage](https://github.com/Eric-Canas/qreader) for details.
+According to the instructions provided with [opencv-contrib-python-headless](https://pypi.org/project/opencv-python-headless/) you are advised to remove any existing installations of opencv as they all share the same `cv2` namespace and will conflict.
 
 # Installation
 
@@ -65,7 +56,7 @@ stable version.
 
 `pip install --user mfawesome`
 
-- For a full installation (with all features):
+- For a full installation (with dev features):
 
 `pip install --user mfawesome[all]`
 
@@ -75,17 +66,7 @@ stable version.
 
 - To install the latest development version:
 
-`git clone git@github.com:rpm5099/mfawesome.git`
-
-or...
-
-`git clone https://github.com/rpm5099/mfawesome.git`
-
-then ...
-
-`cd mfawesome`
-
-`python -m setup.py install`
+`pip install -U -i https://test.pypi.org/simple/ mfawesome`
 
 # Config File
 
@@ -208,6 +189,39 @@ Showing secrets will subject the to viewing by others as well as terminal output
 ![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/run_cont.png?raw=true)
 
 ```
+$mfa -h
+usage: MFAwesome [-h] [--configfile CONFIGFILE] [-L LOGLEVEL] [-T] <run config secrets version hotp test> ...
+
+
+
+     __  ____________
+    /  |/  / ____/   |_      _____  _________  ____ ___  ___
+   / /|_/ / /_  / /| | | /| / / _ \/ ___/ __ \/ __ `__ \/ _ \
+  / /  / / __/ / ___ | |/ |/ /  __(__  ) /_/ / / / / / /  __/
+ /_/  /_/_/   /_/  |_|__/|__/\___/____/\____/_/ /_/ /_/\___/
+
+
+MFAwesome Multifactor Authentication CLI tool.  Protect your secrets and access them easily. Run 'mfa'
+
+options:
+  -h, --help            show this help message and exit
+  --configfile CONFIGFILE
+                        Specify config file with your secrets
+  -L, --loglevel LOGLEVEL
+                        Set loglevel
+  -T, --test            Run in test mode - FOR DEBUGGING ONLY
+
+MFA Commands:
+  <run config secrets version hotp test>
+    run                 Run mfa and display codes
+    version             Show version and exit
+    test                Run MFAwesome tests via pytests
+    hotp                Display HOTP codes
+    config              Config related sub-commands
+    secrets             Secrets related sub-commands
+```
+
+```
 $mfa run -h
 usage: MFAwesome run [-h] [-c] [-e] [-s] [-l] [-n] [-E] [-t TIMELIMIT] [-N] [filterterm]
 
@@ -323,6 +337,8 @@ Running in debug mode can output sensitive information to the terminal and could
 ![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/keyboard_interrupt.png?raw=true)
 
 ![image](https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/finished_codes.png?raw=true)
+
+`mfa test`: Run self tests
 
 # Running From a Jupyter Notebook
 
