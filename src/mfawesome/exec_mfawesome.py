@@ -309,7 +309,7 @@ def LocateMFATests():
         tdir = Path(sp) / "tests"
         if tdir.is_dir():
             for x in tdir.iterdir():
-                mfatests = tdir / "test_mfawesome.py"
+                mfatests = x / "test_mfawesome.py"
                 if mfatests.is_file():
                     return mfatests
     mfatests = Path(mfawesome.__file__).parent.parent.parent / "tests/test_mfawesome.py"
