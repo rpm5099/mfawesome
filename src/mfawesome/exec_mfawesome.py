@@ -312,7 +312,7 @@ def LocateMFATests():
                 mfatests = x / "test_mfawesome.py"
                 if mfatests.is_file():
                     return mfatests
-    mfatests = Path(mfawesome.__file__).parent.parent.parent / "tests/test_mfawesome.py"
+    mfatests = Path(mfawesome.__file__).parent.parent / "tests/test_mfawesome.py"
     if not mfatests.is_file():
         raise MFAwesomeError("Unable to find MFAwesome tests")
     return mfatests
@@ -465,7 +465,7 @@ def main(rawargs: list | tuple | None = None):
             return 1
         mfatests = str(LocateMFATests())
         logger.debug(f"Located mfa tests: {mfatests}")
-        result = pytest.main([])
+        result = pytest.main([mfatests])
         if result != 0:
             printerr(f"MFAwesome tests failed - see pytest output for details")
             return result
