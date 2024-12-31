@@ -62,7 +62,7 @@ jobs:
     - name: Install Apt dependencies
       uses: awalsh128/cache-apt-pkgs-action@latest
       with:
-        packages: apt-utils libgl1 libzbar0 libzbar-dev zbar-tools
+        packages: apt-utils libgl1
         version: 1.0
     - run: poetry install --no-interaction --no-root -E all
       if: steps.cache-deps.outputs.cache-hit != 'true'

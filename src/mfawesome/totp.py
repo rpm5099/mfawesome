@@ -19,21 +19,18 @@ import rich.text
 from rich import print as rprint
 from rich.text import Text
 
-from mfawesome.config import ConfigIO, FilterSecrets, LoadNTPServers, SearchSecrets
-from mfawesome.countdownbars import Countdown, CountdownBar, CountdownBars, DoubleCountdown, ProgBar
+from mfawesome.config import ConfigIO, FilterSecrets, SearchSecrets
+from mfawesome.countdownbars import Countdown, CountdownBars, DoubleCountdown, ProgBar
 from mfawesome.exception import (
     KILLED,
     ConfigError,
     Invalid2FACodeError,
-    MFAwesomeError,
     NoInternetError,
     NTPError,
     NTPInvalidServerResponseError,
-    getExceptionNameError,
 )
 from mfawesome.ntptime import CorrectedTime
 from mfawesome.utils import (
-    HIDE_CURSOR,
     PRINT,
     SHOW_CURSOR,
     FindStrMatch,
@@ -41,14 +38,11 @@ from mfawesome.utils import (
     IsIPython,
     b32decode,
     clear_output_ex,
-    clear_output_line,
     colors,
     colorstring,
     fix_b32decode_pad,
     get_term_size,
     gettime,
-    printcrit,
-    printdbg,
     printerr,
     printok,
     printwarn,
@@ -59,6 +53,7 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("mfa")
 
+# Global to hold ntp time class object for all calculations
 NTPCT = None
 
 
@@ -70,10 +65,6 @@ def init(timeservers):
 def totpcalc(secret: str, period_offset: int = 0) -> tuple[str, float]:
     """2fa"""
     secret = secret.replace("\t", "")
-    # tm = int(time.time() / 30)
-    # ts = ntpo.ts + time_offset
-    # tm = ts / 30.0
-    # time_remaining = (30.0 + time_offset) - (ts % 30.0)
     ts = NTPCT.time + (30.0 * period_offset)
     periodnum = int(ts / 30.0)
     key = b32decode(secret.upper())
@@ -426,7 +417,6 @@ class TFAResults:
 
 def multitotp(
     secrets: dict,
-    # ntpo: ntptime.NTPTime | None = None,
     now: bool = False,
     showsecrets: bool = False,
     endtimer: bool = True,

@@ -93,7 +93,6 @@ def SetupTestMode():
     if TESTDATADIR.exists():
         shutil.rmtree(TESTDATADIR)
     print_test_msg("Preparing test environment")
-    # os.environ["NTP_SERVERS"] = "pfsense.milloy.arpa:time.google.com"
     os.environ["MFAWESOME_CONFIG"] = "/tmp/mfa/mfa_test.conf"
     os.environ["MFAWESOME_PWD"] = "mfaX"  # noqa: S105
     os.environ["MFAWESOME_LOGLEVEL"] = "DEBUG"
@@ -122,6 +121,7 @@ def test_generateconfig():
         mfarun(runargs.split())
     except Exception as e:
         exc = e
+        traceback.print_exception(e)
     result = exc is None
     assert result
 
@@ -335,6 +335,8 @@ def test_qrimport():
         mfarun(runargs.split())
     except Exception as e:
         exc = e
+        traceback.print_exception(e)
+    # logger.critical(f'{secretname in ReadConfigFile(MFACONF)["secrets"]=} {exc=}')
     result = secretname in ReadConfigFile(MFACONF)["secrets"] and exc is None
     if MFACONF.parent.exists():
         shutil.rmtree(MFACONF.parent)

@@ -26,7 +26,7 @@ import traceback
 import types
 import urllib
 from collections.abc import Callable, Generator, KeysView
-from contextlib import suppress
+from contextlib import contextmanager, redirect_stderr, redirect_stdout, suppress
 from dataclasses import dataclass
 from difflib import get_close_matches
 from pathlib import Path
@@ -61,6 +61,31 @@ if TYPE_CHECKING:
     import ipaddress
 
 logger = logging.getLogger("mfa")
+
+
+@contextmanager
+def suppress_stderr_stdout():
+    """A context manager that redirects stdout and stderr to devnull"""
+    with open(os.devnull, "w") as fnull, redirect_stderr(fnull) as err, redirect_stdout(fnull) as sout:
+        yield err, sout
+
+
+def SuppressAllOutput(func):
+    """Decorator to suppress all output, including from binary libraries operating outside python"""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        devnull = open("/dev/null", "w")
+        oldstdout_fno = os.dup(sys.stdout.fileno())
+        oldstderr_fno = os.dup(sys.stderr.fileno())
+        os.dup2(devnull.fileno(), 1)
+        os.dup2(devnull.fileno(), 2)
+        result = func(*args, **kwargs)
+        os.dup2(oldstdout_fno, 1)
+        os.dup2(oldstderr_fno, 2)
+        return result
+
+    return wrapper
 
 
 def PathEx(p: str | Path) -> Path:
@@ -104,6 +129,7 @@ def DownloadVCRedist(vc_url: str = "https://download.microsoft.com/download/2/E/
 
 
 RetType = TypeVar("RetType")
+
 
 def GetOSFlavor():
     if platform.system() == "Linux":
@@ -468,7 +494,7 @@ def stripcolors(s: str) -> str:
 
 
 def colors(*s: list[str]) -> str:
-    """Return colored string.  Uses raw ANSI codes rather than a library.  The color is the first argument colors("red", "some string", "another string")"""
+    """Uses raw ANSI codes rather than a library to return colored strings.  The color is the first argument colors("red", "some string", "another string")"""
     if len(s) == 1:
         return " ".join(s)
     color = s[0]
@@ -696,7 +722,6 @@ def clear_output_line() -> None:
 
 
 def clear_previous_line() -> None:
-    # sys.stdout.write("\033[1A" + get_term_size()[0] * " " + "\033[K")
     print(("\033[F" * 2) + "\n" + get_term_size()[0] * " ", end="\r", flush=True)
     sys.stdout.flush()
 
@@ -761,6 +786,8 @@ def PercentDecode(s: str, limit: int = 5) -> str:
     while "%" in s:
         s = urllib.parse.unquote(s)
         i += 1
+        if i > limit:
+            break
     if "%" in s:
         raise RuntimeError(f"Failed to decode percent encoded string: {s}")
     return s
@@ -818,9 +845,10 @@ def ValidateB32(v: str) -> bool:
         return False
     try:
         b32decode(fix_b32decode_pad(v))
-        return True
     except Invalid2FACodeError:
         return False
+    else:
+        return True
 
 
 def FastInternetCheck(timeout: float = 0.5) -> bool:
@@ -840,43 +868,6 @@ def FastInternetCheck(timeout: float = 0.5) -> bool:
         finally:
             client.close()
     return False
-
-
-# def CheckInternet(
-#     domain: AnyStr = "google.com",
-#     url: AnyStr = "https://www.google.com",
-#     fallbackping: AnyStr = "8.8.8.8",
-#     raise_exceptions: bool = False,
-# ) -> bool:
-#     logger.critical("Skip this shit - FIXME")
-#     return False
-
-#     def pingcheck(ipaddr: str) -> bool:  # | ipaddress.IPAddress) -> bool:
-#         return icmplib.ping(ipaddr, count=1, interval=1, timeout=0.5, privileged=False).is_alive
-
-#     logger.critical("SET TIMEOUT HERE!")
-#     # def dnscheck(domain: str) -> bool:
-#     #    logger.critical("SET TIMEOUT HERE!")
-#     #    return dns.resolver.resolve(domain, "A") is not None
-
-#     def URLCheck(url: str) -> bool:
-#         return requests.get(url, timeout=3).status_code == 200
-
-#     # try:
-#     #     return URLCheck(url=url)
-#     # except requests.exceptions.RequestException as urlexception:
-#     #     try:
-#     #         return dnscheck(domain=domain)
-#     #     except dns.exception.DNSException as dnserror:
-#     #         try:
-#     #             return pingcheck(ipaddr=fallbackping)
-#     #         except icmplib.ICMPLibError as icmperror:
-#     #             if raise_exceptions:
-#     #                 raise ExceptionGroup(
-#     #                     "No internet connectivity - HTTP, DNS and ping requests failed!",
-#     #                     [urlexception, dnserror, icmplib.ICMPLibError(f"Failed to ping fallback ping {fallbackping}"), icmperror],
-#     #                 ) from urlexception
-#     #         return False
 
 
 def CheckFile(fn: str | pathlib.Path) -> bool:
@@ -1021,7 +1012,6 @@ class RunLimit:
                 RunLimit.funcdict[funcid]["limit"] = self.runlimit
 
             if RunLimit.funcdict[funcid]["count"] > RunLimit.funcdict[funcid]["limit"]:
-                # print(f"RunLimit of {RunLimit.funcdict[funcid]['limit']} for {funcid} ({RunLimit.funcdict[funcid]['_func'].__name__}) reached!")
                 return None
             return func(*args, **kwargs)
 

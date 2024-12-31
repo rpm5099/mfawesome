@@ -1,16 +1,10 @@
 from __future__ import annotations
 
 import base64
-import copy
-import functools
 import logging
-import os
 import random
-import shutil
-import sys
 import traceback
 import urllib
-from contextlib import contextmanager, redirect_stderr, redirect_stdout, suppress
 from typing import TYPE_CHECKING, NamedTuple
 
 import cv2
@@ -28,17 +22,13 @@ from mfawesome.utils import (
     PathEx,
     PercentDecode,
     RunOnlyOnce,
+    SuppressAllOutput,
     b32decode,
-    check_yes_no,
-    colors,
-    colorstring,
     filenametimestamp,
     makestr,
     print_with_sep_line,
     printcrit,
-    printdbg,
     printerr,
-    printnorm,
     printok,
     printwarn,
 )
@@ -58,31 +48,6 @@ if IsIPython():
 logger = logging.getLogger("mfa")
 
 MAXQRSIZE = 0x91B
-
-
-@contextmanager
-def suppress_stderr_stdout():
-    """A context manager that redirects stdout and stderr to devnull"""
-    with open(os.devnull, "w") as fnull, redirect_stderr(fnull) as err, redirect_stdout(fnull) as sout:
-        yield err, sout
-
-
-def SuppressAllOutput(func):
-    """Decorator to suppress all output, including from binary libraries operating outside python"""
-
-    @functools.wraps(func)
-    def wrapper(*args, **kwargs):
-        devnull = open("/dev/null", "w")
-        oldstdout_fno = os.dup(sys.stdout.fileno())
-        oldstderr_fno = os.dup(sys.stderr.fileno())
-        os.dup2(devnull.fileno(), 1)
-        os.dup2(devnull.fileno(), 2)
-        result = func(*args, **kwargs)
-        os.dup2(oldstdout_fno, 1)
-        os.dup2(oldstderr_fno, 2)
-        return result
-
-    return wrapper
 
 
 # https://github.com/digitalduke/otpauth-migration-decoder/blob/master/src/decoder.py
@@ -230,8 +195,14 @@ def DisplayRawQR(filename: str | Path) -> None:
 
 def ScanQRImage(filename: str | Path) -> tuple[str]:
     try:
-        qrdata = cv2.imread(str(filename))
         detector = cv2.wechat_qrcode_WeChatQRCode()
+    except Exception as e:
+        traceback.print_exception(e)
+        raise MFAwesomeError(
+            f"Failed to acess cv2.wechat_qrcode_WeChatQRCode() - this can be due to a package conflict.  Ensure that the only opencv package installed is 'opencv-contrib-python-headless'",
+        ) from e
+    try:
+        qrdata = cv2.imread(str(filename))
         res, points = detector.detectAndDecode(qrdata)
     except Exception as e:
         raise QRScanError(f"Exception scanning {filename!s}") from e
