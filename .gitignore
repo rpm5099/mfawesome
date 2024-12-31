@@ -55,3 +55,4 @@ internal/dependencies
 internal/tmp
 internal
 poetry.lock
+*.code-workspace
