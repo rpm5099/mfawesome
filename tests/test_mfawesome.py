@@ -24,10 +24,7 @@ from mfawesome import config
 from mfawesome.config import EXAMPLE_CONFIG, ReadConfigFile, ShowMFAConfigVars
 from mfawesome.exception import EXCEPTIONTESTMODE, DependencyMissingError, xTestComplete
 from mfawesome.logutils import SetupLogging
-
-with suppress(ImportError, ModuleNotFoundError, DependencyMissingError):
-    from mfawesome.qrcodes import AuthSecret, ConvertAuthSecretsToDict, ParseQRUrl, QRExport, ScanQRDir, ScanQRImage
-
+from mfawesome.qrcodes import AuthSecret, ConvertAuthSecretsToDict, ParseQRUrl, QRExport, ScanQRDir, ScanQRImage
 from mfawesome.utils import FastInternetCheck, PathEx, colors
 
 # ruff: noqa: S101
@@ -240,7 +237,7 @@ def test_printconfig():
     assert result
 
 
-def test_addsecret():
+def test_addsecretjson():
     SetupTestMode()
     newsecret = '{"AddedSecret": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}'
     secretname = next(iter(json.loads(newsecret).keys()))
@@ -248,12 +245,33 @@ def test_addsecret():
     try:
         runargs = f"-T -L {TESTLOGLEVEL} config generate {MFACONF}"
         mfarun(runargs.split())
-        runargs = f"-T -L {TESTLOGLEVEL} secrets add".split()
+        runargs = f"-T -L {TESTLOGLEVEL} secrets importjson".split()
+        logger.warning(runargs)
+        runargs.append(newsecret)
+        logger.critical(" ".join(runargs))
+        mfarun(runargs)
+    except Exception as e:
+        exc = e
+    result = secretname in ReadConfigFile(MFACONF)["secrets"]
+    if MFACONF.parent.exists():
+        shutil.rmtree(MFACONF.parent)
+    assert result
+
+
+def test_addsecreturl():
+    SetupTestMode()
+    newsecret = "otpauth://totp/MyNewTestSecret?secret=SECRETCODE&issuer=TestIssuer"
+    secretname = next(iter(ConvertAuthSecretsToDict(ParseQRUrl(newsecret)).keys()))
+    exc = None
+    try:
+        runargs = f"-T -L {TESTLOGLEVEL} config generate {MFACONF}"
+        mfarun(runargs.split())
+        runargs = f"-T -L {TESTLOGLEVEL} secrets importurl".split()
         runargs.append(newsecret)
         mfarun(runargs)
     except Exception as e:
         exc = e
-    result = secretname in ReadConfigFile(MFACONF)["secrets"]  # set(cfgc["secrets"].keys())
+    result = secretname in ReadConfigFile(MFACONF)["secrets"]
     if MFACONF.parent.exists():
         shutil.rmtree(MFACONF.parent)
     assert result
@@ -323,7 +341,7 @@ def test_qrimport():
     try:
         runargs = f"-T -L {TESTLOGLEVEL} config generate {MFACONF}"
         mfarun(runargs.split())
-        runargs = f"-T -L {TESTLOGLEVEL} secrets add".split()
+        runargs = f"-T -L {TESTLOGLEVEL} secrets importjson".split()
         runargs.append(newsecret)
         mfarun(runargs)
         runargs = f"-T -L {TESTLOGLEVEL} secrets export {imagedir}"
@@ -331,7 +349,7 @@ def test_qrimport():
         runargs = f"-T -L {TESTLOGLEVEL} secrets remove".split()
         runargs.append(secretname)
         mfarun(runargs)
-        runargs = f"-T -L {TESTLOGLEVEL} secrets import {imagedir}"
+        runargs = f"-T -L {TESTLOGLEVEL} secrets importqr {imagedir}"
         mfarun(runargs.split())
     except Exception as e:
         exc = e

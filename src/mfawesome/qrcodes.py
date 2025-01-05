@@ -99,7 +99,6 @@ class AuthSecret(NamedTuple):
 
 def ParseQRUrl(otpauth_migration_url: str, nodecode: bool = False) -> list:
     urlcomp = urllib.parse.urlparse(otpauth_migration_url)
-    # AuthSecret = namedtuple("AuthSecret", ["secret", "name", "issuer", "algorithm", "digits", "type", "count"])
     results = []
     # google authenticator
     if urlcomp.query.startswith("data="):
@@ -120,11 +119,6 @@ def ParseQRUrl(otpauth_migration_url: str, nodecode: bool = False) -> list:
         }
         otpdigits = {None: 6, GOAMO.DIGIT_COUNT_UNSPECIFIED: 6, GOAMO.DIGIT_COUNT_SIX: 6, GOAMO.DIGIT_COUNT_EIGHT: 8}
         otptypes = {None: "NONE", GOAMO.OTP_TYPE_UNSPECIFIED: "UNSPECIFIED", GOAMO.OTP_TYPE_HOTP: "HOTP", GOAMO.OTP_TYPE_TOTP: "TOTP"}
-
-        # HOTPWarning("HOTP QR CODES NOT COMPLETED YET")
-        # DEBUG ONLY
-        # logger.critical("REMOVEME")
-        # return otpauth_migration_obj.otp_parameters
         for entry in otpauth_migration_obj.otp_parameters:
             secret = base64.b32encode(entry.secret).decode().strip("=")
             name = entry.name
@@ -137,19 +131,13 @@ def ParseQRUrl(otpauth_migration_url: str, nodecode: bool = False) -> list:
                 counter = getattr(entry, "counter", None)
             period = getattr(entry, "period", 30)
             results.append(AuthSecret(secret, name, issuer, algorithm, digits, otptype, counter, period))
-    # qr code from site - i.e. docker
-    # https://datatracker.ietf.org/doc/draft-linuxgemini-otpauth-uri/
-    # https://github.com/google/google-authenticator/wiki/Key-Uri-Format
-    # otpauth://totp/ACME%20Co:john.doe@email.com?secret=HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ&issuer=ACME%20Co&algorithm=SHA1&digits=6&period=30
+
     elif urlcomp.scheme == "otpauth":
         querydict = urllib.parse.parse_qs(urlcomp.query)
         name = PercentDecode(urlcomp.path.strip("/"))
         logger.debug(f"{name=} {querydict=}")
         secret = querydict.get("secret")
-        # if not secret:
-
         secret = secret[0]
-        logger.critical(f"{secret=}")
         if not IsBase32(secret):
             logger.debug(f"Attempting to convert secret as it is not valid base32: {secret}")
             secret = makestr(base64.b32encode(secret[0].encode())).strip("=")

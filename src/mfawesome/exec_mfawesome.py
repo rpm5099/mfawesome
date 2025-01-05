@@ -40,7 +40,7 @@ from mfawesome.exception import (
     QRImportNotSupportedError,
 )
 from mfawesome.mfa_secrets import GenerateSecret
-from mfawesome.qrcodes import DisplayRawQR, QRExport
+from mfawesome.qrcodes import ConvertAuthSecretsToDict, DisplayRawQR, ParseQRUrl, QRExport
 from mfawesome.totp import runhotp
 from mfawesome.utils import SHOW_CURSOR, CheckFile, IsIPython, PathEx, PathExFile, check_yes_no, colors, jsondump, printcrit, printerr, printnorm, printok, printwarn, suppress_stderr_stdout
 
@@ -110,6 +110,7 @@ def RunParser(rawargs):
         args = parser.parse_args(rawargs)
     except ArgumentErrorIgnore as e:
         logger.debug(f"RunParser not implied by arguments, falling back to full parsing mode: {type(e)=} {e!r}")
+        logger.debug(f"RunParser not implied by arguments, falling back to full parsing mode: {type(e)=} {e!r}")
         return None
     logger.debug(f"Run parser result: {args}")
     return args
@@ -117,6 +118,7 @@ def RunParser(rawargs):
 
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
+    maincmds = ["run", "config", "secrets", "version", "hotp", "test"]
     maincmds = ["run", "config", "secrets", "version", "hotp", "test"]
     args = None
     if not any([x in rawargs for x in ["-h", "--help"]]):
@@ -150,6 +152,9 @@ def Parse_Args(rawargs):
     # test parser
     testparser = subparsers.add_parser("test", help="Run MFAwesome tests via pytests")
 
+    # test parser
+    testparser = subparsers.add_parser("test", help="Run MFAwesome tests via pytests")
+
     # HOTP parser
     hotpparser = subparsers.add_parser("hotp", help="Display HOTP codes")
     hotpparser.add_argument("filterterm", nargs="?", help="Optional term to filter displayed secrets")
@@ -175,7 +180,7 @@ def Parse_Args(rawargs):
     password_parser = config_subparsers.add_parser("password", help="Change password for secrets - unencrypted secrets are never written to disk")
     # secrets parser
     secretsparser = subparsers.add_parser("secrets", help="Secrets related sub-commands")
-    secrets_metavar = "<search generate remove export import qread>"
+    secrets_metavar = "<search generate remove export importqr importurl qread>"
     secrets_subparsers = secretsparser.add_subparsers(title="mfa secrets commands", dest="secrets_command", help="Secrets operations", metavar=secrets_metavar)
     # secrets subcommands
     searchsecrets_parser = secrets_subparsers.add_parser("search", help="Search through all secrets for a filtertem and display matching.")
@@ -187,20 +192,25 @@ def Parse_Args(rawargs):
     export_parser = secrets_subparsers.add_parser("export", help="Export codes in QR images to be scanned by Google Authenticator")
     export_parser.add_argument("exportdir", nargs="?", type=PathEx, const=Path().cwd(), help="Directory to export Google Authenticator secrets to")
     export_parser.add_argument("-f", "--filterterm", "--filter", help="Optional filter term for exported secrets")
-    import_parser = secrets_subparsers.add_parser("import", help="Import codes from QR images")
-    import_parser.add_argument("importdir", type=PathEx, help="Add secrets from QR images by specifying directory containing the images.  Requires libzbar - https://github.com/mchehab/zbar")
-    addsecret_parser = secrets_subparsers.add_parser(
-        "add",
+    import_parser = secrets_subparsers.add_parser("importqr", help="Import codes from QR images")
+    import_parser.add_argument("importdir", type=PathEx, help="Add secrets from QR images by specifying directory containing the images.")
+    importjson_parser = secrets_subparsers.add_parser(
+        "importjson",
         help='Add new secret(s), must be in dict json format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}.  Multiple secrets are acceptable',
     )
-    addsecret_parser.add_argument(
+    importjson_parser.add_argument(
         "secrettext",
         help='Add new secret(s), must be in dict json format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}. Multiple secrets are acceptable',
     )
+    importurl_parser = secrets_subparsers.add_parser(
+        "importurl",
+        help="Add new secret in url format: otpauth://totp/[NAME]]?secret=[TOTP/HOTP]&issuer=[ISSUERNAME]",
+    )
+    importurl_parser.add_argument("url", help="url format: otpauth://totp/[NAME]]?secret=[TOTP/HOTP]&issuer=[ISSUERNAME]")
+
     qread_parser = secrets_subparsers.add_parser("qread", help="Read QR image and output the raw data")
     qread_parser.add_argument("qrfile", type=PathExFile, help="QR file name")
-    if "argcomnplete" in globals():
-        argcomplete.autocomplete(parser)
+
     args = parser.parse_args(rawargs)
     if args.mfa_command == "config" and args.config_command is None:
         raise ArgumentError(f"'mfa config' requires one of {config_metavar}")
@@ -309,13 +319,19 @@ def LocateMFATests():
         tdir = Path(sp) / "tests"
         if tdir.is_dir():
             for x in tdir.iterdir():
+                if x.name.startswith("__"):
+                    continue
                 mfatests = x / "test_mfawesome.py"
                 if mfatests.is_file():
                     return mfatests
-    mfatests = Path(mfawesome.__file__).parent.parent / "tests/test_mfawesome.py"
-    if not mfatests.is_file():
-        raise MFAwesomeError("Unable to find MFAwesome tests")
-    return mfatests
+    mfapath = Path(mfawesome.__file__)
+    for _ in range(len(mfapath.parts)):
+        mfatests = mfapath / "tests/test_mfawesome.py"
+        if mfatests.is_file():
+            logger.debug(f"MFA test file located at temporary install location: {mfatests!s}")
+            return mfatests
+        mfapath = mfapath.parent
+    raise MFAwesomeError("Unable to find MFAwesome tests")
 
 
 def main(rawargs: list | tuple | None = None):
@@ -425,13 +441,18 @@ def main(rawargs: list | tuple | None = None):
                     printerr("Google authenticator export canceled")
             return MFAExit()
 
-        if args.secrets_command == "import":
+        if args.secrets_command == "importurl":
+            with ConfigIORunWrapper(args, validate_config=False) as configio:
+                newsecrets = ConvertAuthSecretsToDict(ParseQRUrl(args.url))
+                configio.AddSecrets(newsecrets)
+
+        if args.secrets_command == "importqr":
             with ConfigIORunWrapper(args, validate_config=False) as configio:
                 newsecrets = LoadQRSecrets(configio._config["secrets"], qrdir=args.importdir, skipconfirm=args.test)
                 configio.AddSecrets(newsecrets)
             return MFAExit()
 
-        if args.secrets_command == "add":
+        if args.secrets_command == "importjson":
             with ConfigIORunWrapper(args, validate_config=False) as configio:
                 try:
                     newsecrets = json.loads(args.secrettext)
@@ -455,6 +476,22 @@ def main(rawargs: list | tuple | None = None):
         logger.debug("mfa run normal")
         Run(args)
         MFAExit()
+
+    if args.mfa_command == "test":
+        printnorm("Running MFAwesome tests...")
+        try:
+            import pytest
+        except ModuleNotFoundError as e:
+            printerr("The pytest package must be installed to run test - 'pip install pytest'")
+            return 1
+        mfatests = str(LocateMFATests())
+        logger.debug(f"Located mfa tests: {mfatests}")
+        result = pytest.main([mfatests])
+        if result != 0:
+            printerr(f"MFAwesome tests failed - see pytest output for details")
+            return result
+        printok("All MFAwesome tests passed!")
+        return result
 
     if args.mfa_command == "test":
         printnorm("Running MFAwesome tests...")
