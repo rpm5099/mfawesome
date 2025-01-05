@@ -110,6 +110,7 @@ def RunParser(rawargs):
         args = parser.parse_args(rawargs)
     except ArgumentErrorIgnore as e:
         logger.debug(f"RunParser not implied by arguments, falling back to full parsing mode: {type(e)=} {e!r}")
+        logger.debug(f"RunParser not implied by arguments, falling back to full parsing mode: {type(e)=} {e!r}")
         return None
     logger.debug(f"Run parser result: {args}")
     return args
@@ -117,6 +118,7 @@ def RunParser(rawargs):
 
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
+    maincmds = ["run", "config", "secrets", "version", "hotp", "test"]
     maincmds = ["run", "config", "secrets", "version", "hotp", "test"]
     args = None
     if not any([x in rawargs for x in ["-h", "--help"]]):
@@ -146,6 +148,9 @@ def Parse_Args(rawargs):
 
     # version parser
     versionparser = subparsers.add_parser("version", help="Show version and exit")
+
+    # test parser
+    testparser = subparsers.add_parser("test", help="Run MFAwesome tests via pytests")
 
     # test parser
     testparser = subparsers.add_parser("test", help="Run MFAwesome tests via pytests")
@@ -471,6 +476,22 @@ def main(rawargs: list | tuple | None = None):
         logger.debug("mfa run normal")
         Run(args)
         MFAExit()
+
+    if args.mfa_command == "test":
+        printnorm("Running MFAwesome tests...")
+        try:
+            import pytest
+        except ModuleNotFoundError as e:
+            printerr("The pytest package must be installed to run test - 'pip install pytest'")
+            return 1
+        mfatests = str(LocateMFATests())
+        logger.debug(f"Located mfa tests: {mfatests}")
+        result = pytest.main([mfatests])
+        if result != 0:
+            printerr(f"MFAwesome tests failed - see pytest output for details")
+            return result
+        printok("All MFAwesome tests passed!")
+        return result
 
     if args.mfa_command == "test":
         printnorm("Running MFAwesome tests...")
