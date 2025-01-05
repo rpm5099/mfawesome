@@ -70,7 +70,7 @@ def AddAlwaysArgs(parser):
         default="info",
         help="Set loglevel",
     )  # , choices=["0", "10", "20", "30", "40", "50", "NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
-    parser.add_argument("-T", "--test", action="store_true", help="Run in test mode - FOR DEBUGGING ONLY")
+    parser.add_argument("-T", "--testmode", action="store_true", help="Run in test mode - FOR DEBUGGING ONLY")
     return parser
 
 
@@ -433,7 +433,7 @@ def main(rawargs: list | tuple | None = None):
                     rich.print_json(json.dumps(filtered_secrets))
                 else:
                     printwarn(f"{len(filtered_secrets)} secrets will be exported to QR images")
-                exportok = True if args.test else check_yes_no(printwarn("Are you sure you want to export all of these secrets?", retstr=True))
+                exportok = True if args.testmode else check_yes_no(printwarn("Are you sure you want to export all of these secrets?", retstr=True))
                 if exportok:
                     QRExport(filtered_secrets, exportdir=args.exportdir)
                     printok("Secrets exported!")
@@ -448,7 +448,7 @@ def main(rawargs: list | tuple | None = None):
 
         if args.secrets_command == "importqr":
             with ConfigIORunWrapper(args, validate_config=False) as configio:
-                newsecrets = LoadQRSecrets(configio._config["secrets"], qrdir=args.importdir, skipconfirm=args.test)
+                newsecrets = LoadQRSecrets(configio._config["secrets"], qrdir=args.importdir, skipconfirm=args.testmode)
                 configio.AddSecrets(newsecrets)
             return MFAExit()
 
