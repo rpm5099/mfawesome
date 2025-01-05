@@ -70,7 +70,7 @@ def AddAlwaysArgs(parser):
         default="info",
         help="Set loglevel",
     )  # , choices=["0", "10", "20", "30", "40", "50", "NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
-    parser.add_argument("-T", "--test", action="store_true", help="Run in test mode - FOR DEBUGGING ONLY")
+    parser.add_argument("-T", "--testmode", action="store_true", help="Run in test mode - FOR DEBUGGING ONLY")
     return parser
 
 
@@ -119,7 +119,6 @@ def RunParser(rawargs):
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
     maincmds = ["run", "config", "secrets", "version", "hotp", "test"]
-    maincmds = ["run", "config", "secrets", "version", "hotp", "test"]
     args = None
     if not any([x in rawargs for x in ["-h", "--help"]]):
         try:
@@ -148,9 +147,6 @@ def Parse_Args(rawargs):
 
     # version parser
     versionparser = subparsers.add_parser("version", help="Show version and exit")
-
-    # test parser
-    testparser = subparsers.add_parser("test", help="Run MFAwesome tests via pytests")
 
     # test parser
     testparser = subparsers.add_parser("test", help="Run MFAwesome tests via pytests")
@@ -433,7 +429,7 @@ def main(rawargs: list | tuple | None = None):
                     rich.print_json(json.dumps(filtered_secrets))
                 else:
                     printwarn(f"{len(filtered_secrets)} secrets will be exported to QR images")
-                exportok = True if args.test else check_yes_no(printwarn("Are you sure you want to export all of these secrets?", retstr=True))
+                exportok = True if args.testmode else check_yes_no(printwarn("Are you sure you want to export all of these secrets?", retstr=True))
                 if exportok:
                     QRExport(filtered_secrets, exportdir=args.exportdir)
                     printok("Secrets exported!")
@@ -448,7 +444,7 @@ def main(rawargs: list | tuple | None = None):
 
         if args.secrets_command == "importqr":
             with ConfigIORunWrapper(args, validate_config=False) as configio:
-                newsecrets = LoadQRSecrets(configio._config["secrets"], qrdir=args.importdir, skipconfirm=args.test)
+                newsecrets = LoadQRSecrets(configio._config["secrets"], qrdir=args.importdir, skipconfirm=args.testmode)
                 configio.AddSecrets(newsecrets)
             return MFAExit()
 
@@ -476,22 +472,6 @@ def main(rawargs: list | tuple | None = None):
         logger.debug("mfa run normal")
         Run(args)
         MFAExit()
-
-    if args.mfa_command == "test":
-        printnorm("Running MFAwesome tests...")
-        try:
-            import pytest
-        except ModuleNotFoundError as e:
-            printerr("The pytest package must be installed to run test - 'pip install pytest'")
-            return 1
-        mfatests = str(LocateMFATests())
-        logger.debug(f"Located mfa tests: {mfatests}")
-        result = pytest.main([mfatests])
-        if result != 0:
-            printerr(f"MFAwesome tests failed - see pytest output for details")
-            return result
-        printok("All MFAwesome tests passed!")
-        return result
 
     if args.mfa_command == "test":
         printnorm("Running MFAwesome tests...")
