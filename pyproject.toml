@@ -1,13 +1,40 @@
+[tool.project]
+license = { text = "MIT License" }
+repository = "https://github.com/rpm5099/mfawesome"
+keywords = ["totp", "hotp", "2fa", "mfa", "cli"]
+
 [tool.poetry]
 name = "mfawesome"
 version = "0.1.73"
 description = "CLI Multi-Factor Authenticator Tool"
 authors = ["Rob Milloy <rob@milloy.net>"]
 readme = "README.md"
-include = ["src/mfawesome/data/*", "tests/*", "images/*"]
-license = "MIT"
-repository = "https://github.com/rpm5099/mfawesome"
-keywords = ["totp", "hotp", "2fa", "mfa", "cli"]
+packages = [{ include = "mfawesome" }, { include = "mfawesome_tests" }]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Framework :: Jupyter",
+    "License :: Freeware",
+    "Natural Language :: English",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: System Administrators",
+    "Topic :: Desktop Environment",
+    "Topic :: Internet",
+    "Topic :: Internet :: WWW/HTTP",
+    "Topic :: Internet :: WWW/HTTP :: Session",
+    "Topic :: Office/Business",
+    "Topic :: Security",
+    "Topic :: Security :: Cryptography",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Utilities",
+]
 
 [tool.poetry.dependencies]
 python = ">= 3.10,< 4.0"
@@ -19,7 +46,7 @@ opencv-contrib-python-headless = ">= 4.5"
 protobuf = "*"
 qrcode = { extras = ["pil"], version = ">= 7.4" }
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
 dnspython = { version = "*", optional = true }
 ruff = ">= 0.6.3"
 
@@ -40,11 +67,11 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.coverage.run]
 branch = true
-source = ["src/mfawesome"]
+source = ["mfawesome"]
 command_line = "-m pytest"
 
 [tool.coverage.report]
-include = ["src/mfawesome/*.py"]
+include = ["mfawesome/*.py"]
 show_missing = true
 
 [tool.coverage.xml]

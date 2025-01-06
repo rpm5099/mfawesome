@@ -12,7 +12,6 @@
 # https://python-poetry.org/docs/pyproject/#extras
 # https://github.com/awalsh128/cache-apt-pkgs-action
 # https://gist.github.com/gh640/233a6daf68e9e937115371c0ecd39c61
-# This is used under the poetry install line, but it breaks qreader so it's disabledif: steps.cache-deps.outputs.cache-hit != 'true'
 
 name: Upload MFAwesome to Test-Pypi
 
@@ -38,7 +37,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.13'
 
     - name: cache poetry install
       uses: actions/cache@v4
@@ -90,7 +89,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.11'
+        python-version: '3.13'
     - name: Install dependencies
       run: |
         python3 -m pip install --upgrade pip setuptools wheel build
