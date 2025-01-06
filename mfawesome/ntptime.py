@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import concurrent.futures
-import datetime
 import ipaddress
 import logging
 import random
@@ -11,6 +10,7 @@ import struct
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
@@ -23,7 +23,7 @@ from mfawesome.utils import TimeoutD
 
 logger = logging.getLogger("mfa")
 
-LOCAL_TZINFO = datetime.datetime.now().astimezone().tzinfo
+LOCAL_TZINFO = datetime.now().astimezone().tzinfo
 
 
 def ReverseDNS(ip, dnstimeout=0.5, nameservers=None):
@@ -112,7 +112,7 @@ class NTPTimestamp:
     systemtime: float
     systemtime_str: str
     corrected_time: float
-    corrected_time_datetime: datetime.datetime
+    corrected_time_datetime: datetime
     corrected_time_str: str
     ntpraw: NTPRaw
 
@@ -185,8 +185,8 @@ def seconds2ms(t):
     return int(round(t * 1000, 0))
 
 
-def Time2Datetime(ts) -> datetime.datetime:
-    return datetime.datetime.fromtimestamp(ts, tz=LOCAL_TZINFO)
+def Time2Datetime(ts) -> datetime:
+    return datetime.fromtimestamp(ts, tz=LOCAL_TZINFO)
 
 
 def Time2Str(ts):
@@ -370,23 +370,32 @@ def MakeIPDict(ntps):
     return ntpips
 
 
-logger.critical("ADD FUNCTION TO DISPLAY CONTINUOUS CLOCK AND A CONTEXT MANAGER TO CHECK CLOCK EVERY TIME")
+def ndelta(n: float) -> str:
+    udelta = "\u0394"
+    if n == 0:
+        posneg = ""
+    elif n > 0:
+        posneg = "+"
+    else:
+        posneg = "-"
+    return f"{udelta} {posneg}{abs(n)}"
 
 
 class CorrectedTime:
     systimeoff: float | None = None
 
     def __init__(self, timeservers: int | list | tuple | set = 10):
-        logger.critical("GETTING DIFFERNT TIMES ON WINDOWS AND LINUJX")
         self._timeservers = timeservers
         self._time = None
+        self._systime = None
         self._init_time = time.time()
 
     @property
     def time(self):
         if CorrectedTime.systimeoff is None:
             CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
-        self._time = time.time() - CorrectedTime.systimeoff
+        self._systime = time.time()
+        self._time = self._systime - CorrectedTime.systimeoff
         return self._time
 
     @property
@@ -406,10 +415,15 @@ class CorrectedTime:
 
     def resync(self) -> None:
         CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
-        self._time = time.time() - CorrectedTime.systimeoff
+        self._systime = time.time()
+        self._time = self._systime - CorrectedTime.systimeoff
+
+    @staticmethod
+    def ts2str(ts: float) -> str:
+        return datetime.fromtimestamp(ts, tz=LOCAL_TZINFO).strftime("%Y-%m-%d %I:%M:%S.%f %p")
 
     def __str__(self) -> str:
-        return time.strftime(f"%Y-%m-%d %I:%M:%S{str(round(self.time % 1, 6))[1:]} %p %Z", time.strptime(time.ctime(self.time)))
+        return CorrectedTime.ts2str(self._time)
 
     def __repr__(self) -> str:
         return self.__str__()
@@ -418,11 +432,20 @@ class CorrectedTime:
         return f"System Time: {self.__str__()}"
 
     def clock(self, n: int = 180):
+        green = "\x1b[1m\x1b[32m"
+        grey = "\x1b[90m"
+        reset = "\x1b[0;0;39m"
         for i in range(n * 5):
-            if i % 60 == 0:
+            if i % 600 == 0:
                 self.resync()
-            print(f"System Time: {self.__str__()} (Offset: {CorrectedTime.systimeoff:0.2f})", end="\r")
+            ts = self.time
+            s = f"{green} Corrected Time: {CorrectedTime.ts2str(ts)} {grey} System Time: {CorrectedTime.ts2str(self._systime)} (Offset: {ndelta(round(CorrectedTime.systimeoff, 2))}s) {reset}      "
+            print(s, end="\r")
             time.sleep(0.2)
+
+
+def Clock():
+    CorrectedTime().clock()
 
 
 NTPSERVERS = {

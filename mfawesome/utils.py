@@ -411,8 +411,9 @@ class ANSIColors:
     YELLOW = "\x1b[33;20m"
     DEBUG_BLUE = "\x1b[38;2;40;177;249m"
     BOLD_ORANGE = "\x1b[38;5;220m\x1b[1m"
+    DARK_GREY = "\x1b[38;5;238m"
     ORANGE = "\x1b[38;5;220m"
-    LIGHTBLACK_EX = "\x1b[90m"
+    GREY = "\x1b[90m"
     LIGHTBLUE_EX = "\x1b[94m"
     LIGHTCYAN_EX = "\x1b[96m"
     LIGHTGREEN_EX = "\x1b[92m"
@@ -430,7 +431,6 @@ class ANSIColors:
     ROYAL_BLUE = "\x1b[38;5;21m"
     WHITE = "\x1b[37m"
     DARK_BLUE = "\x1b[38;5;20m"  # type: ignore
-    GREY = "\x1b[38;20m"  # type: ignore
     BOLD_BLACK = "\x1b[1m\x1b[30m"
     BOLD_BLUE = "\x1b[1m\x1b[34m"
     BOLD_BOLD = "\x1b[1m\x1b[1m"
@@ -439,7 +439,6 @@ class ANSIColors:
     BOLD_DEBUG_BLUE = "\x1b[1m\x1b[38;2;40;177;249m"
     BOLD_FORCE_NO_COLOR = "\x1b[1m\x1b[0m"
     BOLD_GREEN = "\x1b[1m\x1b[32m"
-    BOLD_GREY = "\x1b[1m\x1b[38;20m"
     BOLD_LIGHTBLACK_EX = "\x1b[1m\x1b[90m"
     BOLD_LIGHTBLUE_EX = "\x1b[1m\x1b[94m"
     BOLD_LIGHTCYAN_EX = "\x1b[1m\x1b[96m"
@@ -486,6 +485,23 @@ class ANSIColors:
                     color = f"{esc}{x};{y};{z}m"
                     s.append(f"{color} {color!r} {reset}")
                 print(" ".join(s))
+
+    @staticmethod
+    def ColorTest2(xrange=(48, 49), yrange=(5, 6), zrange=(0, 256)) -> None:
+        """
+        Print color boxes by changing background color (48).  To use the color for foreground
+        use the same number but change to 38
+
+        """
+        numrequested = len(range(*xrange)) * len(range(*yrange)) * len(range(*zrange))
+        print(f"Number of colors requested: {numrequested:,}")
+        esc = "\x1b["
+        for x in range(*xrange):
+            for y in range(*yrange):
+                for z in range(*zrange):
+                    color = f"{esc}{x};{y};{z}m"
+                    s = f"({x},{y},{z}) {color!r}: {color}                  {ANSIColors.RESET}"
+                    print(s)
 
 
 def stripcolors(s: str) -> str:
