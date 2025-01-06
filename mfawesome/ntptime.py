@@ -444,8 +444,8 @@ class CorrectedTime:
             time.sleep(0.2)
 
 
-def Clock():
-    CorrectedTime().clock()
+def Clock(n: int = 180):
+    CorrectedTime().clock(n)
 
 
 NTPSERVERS = {
