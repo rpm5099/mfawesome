@@ -339,7 +339,7 @@ def systime_offset(pool: int | list | set | tuple = 10, timeout: float = 1.0):
     percent_stdev = (stdev / mean) * 100
     if percent_stdev > 200:
         raise NTPError(f"Standard deviation is {percent_stdev:.3f}% of mean - one or more time servers may be inaccurate")
-    return mean
+    return -mean
 
 
 def timestamp(pool: int | list | set | tuple = 10, timeout: float = 1.0):
@@ -370,26 +370,30 @@ def MakeIPDict(ntps):
     return ntpips
 
 
+logger.critical("ADD FUNCTION TO DISPLAY CONTINUOUS CLOCK AND A CONTEXT MANAGER TO CHECK CLOCK EVERY TIME")
+
+
 class CorrectedTime:
-    systime_offset: float | None = None
+    systimeoff: float | None = None
 
     def __init__(self, timeservers: int | list | tuple | set = 10):
+        logger.critical("GETTING DIFFERNT TIMES ON WINDOWS AND LINUJX")
         self._timeservers = timeservers
         self._time = None
         self._init_time = time.time()
 
     @property
     def time(self):
-        if CorrectedTime.systime_offset is None:
-            CorrectedTime.systime_offset = systime_offset(pool=self._timeservers)
-        self._time = time.time() - CorrectedTime.systime_offset
+        if CorrectedTime.systimeoff is None:
+            CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
+        self._time = time.time() - CorrectedTime.systimeoff
         return self._time
 
     @property
     def init_time(self):
-        if CorrectedTime.systime_offset is None:
+        if CorrectedTime.systimeoff is None:
             return self._init_time
-        return self._init_time - CorrectedTime.systime_offset
+        return self._init_time - CorrectedTime.systimeoff
 
     @property
     def timeservers(self):
@@ -398,7 +402,27 @@ class CorrectedTime:
     @timeservers.setter
     def timeservers(self, newtimeservers):
         self._timeservers = newtimeservers
-        CorrectedTime.systime_offset = systime_offset(pool=self._timeservers)
+        CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
+
+    def resync(self) -> None:
+        CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
+        self._time = time.time() - CorrectedTime.systimeoff
+
+    def __str__(self) -> str:
+        return time.strftime(f"%Y-%m-%d %I:%M:%S{str(round(self.time % 1, 6))[1:]} %p %Z", time.strptime(time.ctime(self.time)))
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def systimestr(self) -> str:
+        return f"System Time: {self.__str__()}"
+
+    def clock(self, n: int = 180):
+        for i in range(n * 5):
+            if i % 60 == 0:
+                self.resync()
+            print(f"System Time: {self.__str__()} (Offset: {CorrectedTime.systimeoff:0.2f})", end="\r")
+            time.sleep(0.2)
 
 
 NTPSERVERS = {
