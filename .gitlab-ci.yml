@@ -19,7 +19,7 @@ cache:
 
 .poetry_setup: &poetry_setup
   before_script:
-    - apt-get update && apt-get install -y apt-utils libgl1 libzbar0
+    - apt-get update && apt-get install -y apt-utils libgl1
     - python -V
     - python -m pip install --upgrade pip
     - python -m pip install pipx
@@ -31,7 +31,7 @@ Testing:
   <<: *poetry_setup
   stage: test
   script:
-    - poetry run pytest -v
+    - poetry run pytest -vq
     - poetry run coverage run
     - poetry run coverage report
     - poetry run coverage xml

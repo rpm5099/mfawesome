@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 from __future__ import annotations
 
 import argparse
@@ -92,7 +91,7 @@ class ErrorCatchingArgumentParser(argparse.ArgumentParser):
         if status:
             raise ArgumentErrorIgnore(f"Invalid arguments for RunParser: {message}")
 
-    def print_usage(self, file):
+    def print_usage(self, file):  # type: ignore  # noqa: ARG002
         return
 
 
@@ -118,9 +117,9 @@ def RunParser(rawargs):
 
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
-    maincmds = ["run", "config", "secrets", "version", "hotp", "test"]
+    maincmds = ["run", "config", "secrets", "version", "hotp", "tests"]
     args = None
-    if not any([x in rawargs for x in ["-h", "--help"]]):
+    if not any(x in rawargs for x in ["-h", "--help"]):
         try:
             args = RunParser(rawargs)
         except ArgumentErrorIgnore as e:
@@ -149,7 +148,7 @@ def Parse_Args(rawargs):
     versionparser = subparsers.add_parser("version", help="Show version and exit")
 
     # test parser
-    testparser = subparsers.add_parser("test", help="Run MFAwesome tests via pytests")
+    testparser = subparsers.add_parser("tests", help="Run MFAwesome tests via pytests")
 
     # HOTP parser
     hotpparser = subparsers.add_parser("hotp", help="Display HOTP codes")
@@ -311,18 +310,17 @@ def Run(args):
 
 
 def LocateMFATests():
-    for sp in site.getsitepackages():
-        tdir = Path(sp) / "tests"
-        if tdir.is_dir():
-            for x in tdir.iterdir():
-                if x.name.startswith("__"):
-                    continue
-                mfatests = x / "test_mfawesome.py"
-                if mfatests.is_file():
-                    return mfatests
+    logutils.SetLoggingLevel(level="DEBUG")
+    testmod = Path(next(iter(site.getsitepackages()))) / "mfawesome_tests/test_mfawesome.py"
+    logger.debug(f"Checking if file exists:  {testmod}")
+    if testmod.is_file():
+        logger.debug(f"MFAwesome tests module found: {testmod!s}")
+        return testmod
+
+    logger.debug(f"Unable to find test_mfawesome.py in installed location, checking temporary install above {mfawesome.__file__=}...")
     mfapath = Path(mfawesome.__file__)
     for _ in range(len(mfapath.parts)):
-        mfatests = mfapath / "tests/test_mfawesome.py"
+        mfatests = mfapath / "../mfawesome_tests/test_mfawesome.py"
         if mfatests.is_file():
             logger.debug(f"MFA test file located at temporary install location: {mfatests!s}")
             return mfatests
@@ -399,7 +397,12 @@ def main(rawargs: list | tuple | None = None):
             with ConfigIORunWrapper(args) as configio:
                 results = SearchSecrets(args.searchterms, secrets=configio.config["secrets"], exact=args.exact)
                 if len(results) == 0:
-                    printerr(f"No secrets found matching term(s): {args.searchterms}")
+                    err = f"{args.exact=} No secrets found matching term(s): {args.searchterms}"
+                    if args.exact:
+                        err += "   Try searching without the exact flag -e/--exact set"
+                    printerr(err)
+                    # printerr(f"No secrets found matching term(s): {args.searchterms}")
+
                 else:
                     rich.print_json(jsondump(results))
             return MFAExit()
@@ -473,7 +476,7 @@ def main(rawargs: list | tuple | None = None):
         Run(args)
         MFAExit()
 
-    if args.mfa_command == "test":
+    if args.mfa_command == "tests":
         printnorm("Running MFAwesome tests...")
         try:
             import pytest
