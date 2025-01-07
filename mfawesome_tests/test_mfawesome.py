@@ -24,6 +24,7 @@ from mfawesome import config
 from mfawesome.config import EXAMPLE_CONFIG, ReadConfigFile, ShowMFAConfigVars
 from mfawesome.exception import EXCEPTIONTESTMODE, DependencyMissingError, xTestComplete
 from mfawesome.logutils import SetupLogging
+from mfawesome.ntptime import CorrectedTime
 from mfawesome.qrcodes import AuthSecret, ConvertAuthSecretsToDict, ParseQRUrl, QRExport, ScanQRDir, ScanQRImage
 from mfawesome.utils import FastInternetCheck, PathEx, colors
 
@@ -108,6 +109,19 @@ def SetupTestMode():
 
 def test_checkinternet():
     assert FastInternetCheck()
+
+
+def test_clock():
+    SetupTestMode()
+    exc = None
+    runargs = f"-T -L {TESTLOGLEVEL} clock 1"
+    try:
+        mfarun(runargs.split())
+    except Exception as e:
+        exc = e
+        traceback.print_exception(e)
+    result = exc is None
+    assert result
 
 
 def test_generateconfig():

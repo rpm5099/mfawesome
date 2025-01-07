@@ -39,6 +39,7 @@ from mfawesome.exception import (
     QRImportNotSupportedError,
 )
 from mfawesome.mfa_secrets import GenerateSecret
+from mfawesome.ntptime import CorrectedTime
 from mfawesome.qrcodes import ConvertAuthSecretsToDict, DisplayRawQR, ParseQRUrl, QRExport
 from mfawesome.totp import runhotp
 from mfawesome.utils import SHOW_CURSOR, CheckFile, IsIPython, PathEx, PathExFile, check_yes_no, colors, jsondump, printcrit, printerr, printnorm, printok, printwarn, suppress_stderr_stdout
@@ -117,7 +118,7 @@ def RunParser(rawargs):
 
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
-    maincmds = ["run", "config", "secrets", "version", "hotp", "tests"]
+    maincmds = ["run", "config", "secrets", "version", "hotp", "clock", "tests"]
     args = None
     if not any(x in rawargs for x in ["-h", "--help"]):
         try:
@@ -187,8 +188,8 @@ def Parse_Args(rawargs):
     export_parser = secrets_subparsers.add_parser("export", help="Export codes in QR images to be scanned by Google Authenticator")
     export_parser.add_argument("exportdir", nargs="?", type=PathEx, const=Path().cwd(), help="Directory to export Google Authenticator secrets to")
     export_parser.add_argument("-f", "--filterterm", "--filter", help="Optional filter term for exported secrets")
-    import_parser = secrets_subparsers.add_parser("importqr", help="Import codes from QR images")
-    import_parser.add_argument("importdir", type=PathEx, help="Add secrets from QR images by specifying directory containing the images.")
+    importqr_parser = secrets_subparsers.add_parser("importqr", help="Import codes from QR images")
+    importqr_parser.add_argument("importdir", type=PathEx, help="Add secrets from QR images by specifying directory containing the images.")
     importjson_parser = secrets_subparsers.add_parser(
         "importjson",
         help='Add new secret(s), must be in dict json format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}.  Multiple secrets are acceptable',
@@ -205,6 +206,9 @@ def Parse_Args(rawargs):
 
     qread_parser = secrets_subparsers.add_parser("qread", help="Read QR image and output the raw data")
     qread_parser.add_argument("qrfile", type=PathExFile, help="QR file name")
+
+    clockparser = subparsers.add_parser("clock", help="Display corrected time clock and system delta")
+    clockparser.add_argument("n", nargs="?", type=int, default=180, help="Number of seconds to run the clock, default is 180s")
 
     args = parser.parse_args(rawargs)
     if args.mfa_command == "config" and args.config_command is None:
@@ -475,6 +479,10 @@ def main(rawargs: list | tuple | None = None):
         logger.debug("mfa run normal")
         Run(args)
         MFAExit()
+
+    if args.mfa_command == "clock":
+        CorrectedTime().clock(n=args.n)
+        return MFAExit()
 
     if args.mfa_command == "tests":
         printnorm("Running MFAwesome tests...")
