@@ -64,12 +64,7 @@ def MFAExit(code: int = 0) -> None:
 def AddAlwaysArgs(parser):
     # Global arguments applicable to all commands
     parser.add_argument("--configfile", type=pathlib.Path, default=None, help="Specify config file with your secrets")
-    parser.add_argument(
-        "-L",
-        "--loglevel",
-        default="info",
-        help="Set loglevel",
-    )  # , choices=["0", "10", "20", "30", "40", "50", "NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+    parser.add_argument("-L", "--loglevel", default="info", help="Set loglevel", choices=["0", "10", "20", "30", "40", "50", "NOTSET", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
     parser.add_argument("-T", "--testmode", action="store_true", help="Run in test mode - FOR DEBUGGING ONLY")
     return parser
 

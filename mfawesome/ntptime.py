@@ -3,6 +3,7 @@ from __future__ import annotations
 import concurrent.futures
 import ipaddress
 import logging
+import os
 import random
 import socket
 import statistics
@@ -230,8 +231,8 @@ def RequestTime(timeserver: str, timeout: float = -1, port: int = 123) -> tuple[
         data, ipaddress, sys_tx, sys_rcv = _RequestTime(timeserver, timeout, port)
         round_trip_time = sys_rcv - sys_tx
 
-        logger.debug(f"Got time from server {timeserver} {ipaddress} with length {len(data)} with round trip {(round_trip_time):.2f}s")
-    except (socket.gaierror, TimeoutError, NTPTimeoutError) as e:
+        logger.debug(f"Got time from server {timeserver} with IP:{ipaddress} with length {len(data)} with round trip {(round_trip_time):.2f}s")
+    except (socket.gaierror, TimeoutError, NTPTimeoutError, ConnectionResetError) as e:
         if isinstance(e, socket.gaierror):
             raise NTPTimeoutError(f"socket.gaierror indicates DNS or general network connection failure") from e
         raise NTPTimeoutError(f"Error contacting timeserver {timeserver}: {e!r} with timeout {timeout}") from e
@@ -306,7 +307,8 @@ def PooledNTPTime(pool: int | list | set | tuple = 10, timeout: float = 1.0):
     def Task(server, timeout):
         try:
             result = NTPTime(server, timeout)
-        except NTPError as e:
+        # except NTPError as e:
+        except Exception as e:
             return e
         else:
             return result
@@ -337,7 +339,7 @@ def systime_offset(pool: int | list | set | tuple = 10, timeout: float = 1.0):
     stdev = statistics.stdev(offsets)
     mean = statistics.mean(offsets)
     percent_stdev = (stdev / mean) * 100
-    if percent_stdev > 200:
+    if percent_stdev > 300:
         raise NTPError(f"Standard deviation is {percent_stdev:.3f}% of mean - one or more time servers may be inaccurate")
     return -mean
 
@@ -386,6 +388,10 @@ class CorrectedTime:
 
     def __init__(self, timeservers: int | list | tuple | set = 10):
         self._timeservers = timeservers
+        if envtservers := os.environ.get("TIMESERVERS"):
+            self._timeservers = envtservers.split(":")
+            logger.debug(f"Got time servers from environment variable: {self._timeservers}")
+
         self._time = None
         self._systime = None
         self._init_time = time.time()
