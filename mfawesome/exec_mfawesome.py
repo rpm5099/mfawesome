@@ -17,27 +17,9 @@ with suppress(Exception):
 import rich
 
 import mfawesome
-from mfawesome import (
-    __author__,
-    __author_email__,
-    __description__,
-    __logo__,
-    __title__,
-    __url__,
-    __version__,
-    config,
-    exception,
-    logutils,
-    totp,
-)
+from mfawesome import __author__, __author_email__, __description__, __logo__, __title__, __url__, __version__, config, exception, logutils, totp
 from mfawesome.config import ConfigIO, FilterSecrets, GenerateDefaultConfig, LoadQRSecrets, PrintConfig, SearchSecrets
-from mfawesome.exception import (
-    ArgumentError,
-    ArgumentErrorIgnore,
-    ConfigError,
-    MFAwesomeError,
-    QRImportNotSupportedError,
-)
+from mfawesome.exception import ArgumentError, ArgumentErrorIgnore, ConfigError, MFAwesomeError, QRImportNotSupportedError
 from mfawesome.mfa_secrets import GenerateSecret
 from mfawesome.ntptime import CorrectedTime
 from mfawesome.qrcodes import ConvertAuthSecretsToDict, DisplayRawQR, ParseQRUrl, QRExport
@@ -113,7 +95,7 @@ def RunParser(rawargs):
 
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
-    maincmds = ["run", "config", "secrets", "version", "hotp", "clock", "tests"]
+    maincmds = ["run", "config", "secrets", "version", "hotp", "clock", "tests", "qread"]
     args = None
     if not any(x in rawargs for x in ["-h", "--help"]):
         try:
@@ -171,7 +153,7 @@ def Parse_Args(rawargs):
     password_parser = config_subparsers.add_parser("password", help="Change password for secrets - unencrypted secrets are never written to disk")
     # secrets parser
     secretsparser = subparsers.add_parser("secrets", help="Secrets related sub-commands")
-    secrets_metavar = "<search generate remove export importqr importurl qread>"
+    secrets_metavar = "<search generate remove export importqr importurl>"
     secrets_subparsers = secretsparser.add_subparsers(title="mfa secrets commands", dest="secrets_command", help="Secrets operations", metavar=secrets_metavar)
     # secrets subcommands
     searchsecrets_parser = secrets_subparsers.add_parser("search", help="Search through all secrets for a filtertem and display matching.")
@@ -186,20 +168,15 @@ def Parse_Args(rawargs):
     importqr_parser = secrets_subparsers.add_parser("importqr", help="Import codes from QR images")
     importqr_parser.add_argument("importdir", type=PathEx, help="Add secrets from QR images by specifying directory containing the images.")
     importjson_parser = secrets_subparsers.add_parser(
-        "importjson",
-        help='Add new secret(s), must be in dict json format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}.  Multiple secrets are acceptable',
+        "importjson", help='Add new secret(s), must be in dict json format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}.  Multiple secrets are acceptable'
     )
     importjson_parser.add_argument(
-        "secrettext",
-        help='Add new secret(s), must be in dict json format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}. Multiple secrets are acceptable',
+        "secrettext", help='Add new secret(s), must be in dict json format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}. Multiple secrets are acceptable'
     )
-    importurl_parser = secrets_subparsers.add_parser(
-        "importurl",
-        help="Add new secret in url format: otpauth://totp/[NAME]]?secret=[TOTP/HOTP]&issuer=[ISSUERNAME]",
-    )
+    importurl_parser = secrets_subparsers.add_parser("importurl", help="Add new secret in url format: otpauth://totp/[NAME]]?secret=[TOTP/HOTP]&issuer=[ISSUERNAME]")
     importurl_parser.add_argument("url", help="url format: otpauth://totp/[NAME]]?secret=[TOTP/HOTP]&issuer=[ISSUERNAME]")
 
-    qread_parser = secrets_subparsers.add_parser("qread", help="Read QR image and output the raw data")
+    qread_parser = subparsers.add_parser("qread", help="Read QR image and output the raw data")
     qread_parser.add_argument("qrfile", type=PathExFile, help="QR file name")
 
     clockparser = subparsers.add_parser("clock", help="Display corrected time clock and system delta")
@@ -455,16 +432,10 @@ def main(rawargs: list | tuple | None = None):
                 try:
                     newsecrets = json.loads(args.secrettext)
                 except json.JSONDecodeError as e:
-                    printerr(
-                        f'The provided secret could not be parsed: {args.secrettext}\nUse this format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}',
-                    )
+                    printerr(f'The provided secret could not be parsed: {args.secrettext}\nUse this format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}')
                     return MFAExit(1)
                 configio.AddSecrets(newsecrets)
                 return MFAExit()
-
-        if args.secrets_command == "qread":
-            DisplayRawQR(args.qrfile)
-            return MFAExit()
 
     if args.mfa_command == "hotp":
         runhotp(configfile=args.configfile, filterterm=args.filterterm, exact=args.exact, showsecrets=args.showsecrets)
@@ -474,6 +445,10 @@ def main(rawargs: list | tuple | None = None):
         logger.debug("mfa run normal")
         Run(args)
         MFAExit()
+
+    if args.mfa_command == "qread":
+        DisplayRawQR(args.qrfile)
+        return MFAExit()
 
     if args.mfa_command == "clock":
         CorrectedTime().clock(n=args.n)

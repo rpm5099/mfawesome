@@ -4,6 +4,7 @@ import base64
 import io
 import logging
 import random
+import re
 import traceback
 import urllib
 from pathlib import Path
@@ -34,6 +35,7 @@ from mfawesome.utils import (
     print_with_sep_line,
     printcrit,
     printerr,
+    printnorm,
     printok,
     printwarn,
 )
@@ -63,7 +65,7 @@ def HOTPWarning(m) -> None:
 
 def Init_Otpauth_Migration() -> google.protobuf.message.Message:
     DESCRIPTOR = descriptor_pool.Default().AddSerializedFile(
-        b'\n\x17otpauth-migration.proto\x12\x11otpauth_migration"\xa7\x05\n\x07Payload\x12@\n\x0eotp_parameters\x18\x01 \x03(\x0b\x32(.otpauth_migration.Payload.OtpParameters\x12\x0f\n\x07version\x18\x02 \x01(\x05\x12\x12\n\nbatch_size\x18\x03 \x01(\x05\x12\x13\n\x0b\x62\x61tch_index\x18\x04 \x01(\x05\x12\x10\n\x08\x62\x61tch_id\x18\x05 \x01(\x05\x1a\xf0\x01\n\rOtpParameters\x12\x0e\n\x06secret\x18\x01 \x01(\x0c\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0e\n\x06issuer\x18\x03 \x01(\t\x12\x37\n\talgorithm\x18\x04 \x01(\x0e\x32$.otpauth_migration.Payload.Algorithm\x12\x35\n\x06\x64igits\x18\x05 \x01(\x0e\x32%.otpauth_migration.Payload.DigitCount\x12\x30\n\x04type\x18\x06 \x01(\x0e\x32".otpauth_migration.Payload.OtpType\x12\x0f\n\x07\x63ounter\x18\x07 \x01(\x03"y\n\tAlgorithm\x12\x19\n\x15\x41LGORITHM_UNSPECIFIED\x10\x00\x12\x12\n\x0e\x41LGORITHM_SHA1\x10\x01\x12\x14\n\x10\x41LGORITHM_SHA256\x10\x02\x12\x14\n\x10\x41LGORITHM_SHA512\x10\x03\x12\x11\n\rALGORITHM_MD5\x10\x04"U\n\nDigitCount\x12\x1b\n\x17\x44IGIT_COUNT_UNSPECIFIED\x10\x00\x12\x13\n\x0f\x44IGIT_COUNT_SIX\x10\x01\x12\x15\n\x11\x44IGIT_COUNT_EIGHT\x10\x02"I\n\x07OtpType\x12\x18\n\x14OTP_TYPE_UNSPECIFIED\x10\x00\x12\x11\n\rOTP_TYPE_HOTP\x10\x01\x12\x11\n\rOTP_TYPE_TOTP\x10\x02\x62\x06proto3',
+        b'\n\x17otpauth-migration.proto\x12\x11otpauth_migration"\xa7\x05\n\x07Payload\x12@\n\x0eotp_parameters\x18\x01 \x03(\x0b\x32(.otpauth_migration.Payload.OtpParameters\x12\x0f\n\x07version\x18\x02 \x01(\x05\x12\x12\n\nbatch_size\x18\x03 \x01(\x05\x12\x13\n\x0b\x62\x61tch_index\x18\x04 \x01(\x05\x12\x10\n\x08\x62\x61tch_id\x18\x05 \x01(\x05\x1a\xf0\x01\n\rOtpParameters\x12\x0e\n\x06secret\x18\x01 \x01(\x0c\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x0e\n\x06issuer\x18\x03 \x01(\t\x12\x37\n\talgorithm\x18\x04 \x01(\x0e\x32$.otpauth_migration.Payload.Algorithm\x12\x35\n\x06\x64igits\x18\x05 \x01(\x0e\x32%.otpauth_migration.Payload.DigitCount\x12\x30\n\x04type\x18\x06 \x01(\x0e\x32".otpauth_migration.Payload.OtpType\x12\x0f\n\x07\x63ounter\x18\x07 \x01(\x03"y\n\tAlgorithm\x12\x19\n\x15\x41LGORITHM_UNSPECIFIED\x10\x00\x12\x12\n\x0e\x41LGORITHM_SHA1\x10\x01\x12\x14\n\x10\x41LGORITHM_SHA256\x10\x02\x12\x14\n\x10\x41LGORITHM_SHA512\x10\x03\x12\x11\n\rALGORITHM_MD5\x10\x04"U\n\nDigitCount\x12\x1b\n\x17\x44IGIT_COUNT_UNSPECIFIED\x10\x00\x12\x13\n\x0f\x44IGIT_COUNT_SIX\x10\x01\x12\x15\n\x11\x44IGIT_COUNT_EIGHT\x10\x02"I\n\x07OtpType\x12\x18\n\x14OTP_TYPE_UNSPECIFIED\x10\x00\x12\x11\n\rOTP_TYPE_HOTP\x10\x01\x12\x11\n\rOTP_TYPE_TOTP\x10\x02\x62\x06proto3'
     )
     PBUFF = {}
     _sym_db = symbol_database.Default()
@@ -169,21 +171,29 @@ def ParseQRUrl(otpauth_migration_url: str, nodecode: bool = False) -> list:
 
 
 def DisplayRawQR(filename: str | Path) -> None:
+    url_regex = re.compile(
+        r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+    )
     try:
         qrdata = ScanQRImage(filename)
-        for entry in qrdata:
-            try:
-                rprint(ParseQRUrl(entry, nodecode=False))
-            except KeyError as e:
-                logger.debug(f"QRRead exception: {e!r}")
-                try:
-                    rprint(ParseQRUrl(entry, nodecode=True))
-                except Exception as e1:
-                    logger.debug(f"QRRead exception: {e1!r}")
     except Exception as e2:
-        printerr(f"Failed to read QR image: {filename!s} _ {e2!r}")
+        printerr(f"Failed to read QR image: {filename!s}: {e2!r}")
         if logger.level == 10:
             traceback.print_exception(e2)
+        return
+    if len(qrdata) == 0:
+        printerr(f"No qr's identified in {filename!s}")
+        return
+    if len(qrdata) > 1:
+        printnorm(f"{len(qrdata)} QR's identified in {filename!s}:")
+        for i, entry in enumerate(qrdata):
+            rprint(f"\t{i}) {entry}")
+            if re.match(url_regex, entry):
+                rprint(f"\t[link={entry}]clickable link[/link]")
+    else:
+        rprint(qrdata[0])
+        if re.match(url_regex, qrdata[0]):
+            rprint(f"\t[link={qrdata[0]}]clickable link[/link]")
 
 
 # NEED METHOD FOR READING cv2.imread from BYTES - check work
@@ -193,7 +203,7 @@ def ScanQRImage(filename: str | Path) -> tuple[str]:
     except Exception as e:
         traceback.print_exception(e)
         raise MFAwesomeError(
-            f"Failed to acess cv2.wechat_qrcode_WeChatQRCode() - this can be due to a package conflict.  Ensure that the only opencv package installed is 'opencv-contrib-python-headless'",
+            f"Failed to acess cv2.wechat_qrcode_WeChatQRCode() - this can be due to a package conflict.  Ensure that the only opencv package installed is 'opencv-contrib-python-headless'"
         ) from e
     try:
         qrdata = cv2.imread(str(filename))
@@ -258,13 +268,7 @@ def QRExport(secrets: dict, exportdir: str | Path | None = None, max_secrets_per
         raise OSError(f"Cannot use location as export directory, file exist with that name: {exportdir!s}")
     _GOAMO = Init_Otpauth_Migration()
     exportable = []
-    otpalgorithms = {
-        None: _GOAMO.ALGORITHM_SHA1,
-        "SHA1": _GOAMO.ALGORITHM_SHA1,
-        "SHA256": _GOAMO.ALGORITHM_SHA256,
-        "SHA512": _GOAMO.ALGORITHM_SHA512,
-        "MD5": _GOAMO.ALGORITHM_MD5,
-    }
+    otpalgorithms = {None: _GOAMO.ALGORITHM_SHA1, "SHA1": _GOAMO.ALGORITHM_SHA1, "SHA256": _GOAMO.ALGORITHM_SHA256, "SHA512": _GOAMO.ALGORITHM_SHA512, "MD5": _GOAMO.ALGORITHM_MD5}
     otpdigits = {None: _GOAMO.DIGIT_COUNT_SIX, 6: _GOAMO.DIGIT_COUNT_SIX, 8: _GOAMO.DIGIT_COUNT_EIGHT}
     otptypes = {"hotp": _GOAMO.OTP_TYPE_HOTP, "totp": _GOAMO.OTP_TYPE_TOTP}
     exportable = []
