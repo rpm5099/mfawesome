@@ -9,7 +9,7 @@
 
 # Summary
 
-**MFAwesome** (MFA) is an open-source system cross-platform command line based multifactor authentication tool. It allows secure storage of your TOTP and HOTP secrets in a simple config file that can be exported for use even on systems you do not trust. It allows importing secrets via Google Authenticator QR codes.
+**MFAwesome** (MFA) is an open-source system cross-platform command line based multifactor authentication tool. It allows secure storage of your TOTP and HOTP secrets in a simple config file that can be exported for use even on systems you do not trust. It allows importing secrets via Google Authenticator QR codes. Anything that refers to using your "Authenticator App" can be stored and accessed in MFAwesome.  In addition, you can store any secrets in `mfawesome.conf` and they will be searchable, exportable, and secure once encrypted.  It can also be used to read the raw contents of any QR code 
 
 MFA provides keylogger protection, fuzzy matching on secret names, multiple encryption options and automatic synchronization via public NTP servers (custom NTP sever can be set in the config). It is faster and easier for those accustomed to CLI than using an app on your phone.
 
@@ -348,7 +348,7 @@ mfa("run")
 mfa("secrets export /tmp/mfa")
 ```
 | :iphone: Mobile Import |
-| ----------- |
+| ---------------------- |
 `secrets export` run in Jupyter will display the QR images to scan for import into your mobile device
 
 # License

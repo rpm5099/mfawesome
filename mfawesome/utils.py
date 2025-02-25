@@ -32,6 +32,11 @@ from difflib import get_close_matches
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, AnyStr, ClassVar, TypeVar
 
+with suppress(Exception):
+    import thefuzz
+    import thefuzz.process as fuzzproc
+    from thefuzz import fuzz
+
 import numpy as np
 
 # import requests
@@ -57,10 +62,11 @@ except ImportError:
 
 from mfawesome.exception import Invalid2FACodeError, ScreenResizeError
 
-if TYPE_CHECKING:
-    import ipaddress
-
 logger = logging.getLogger("mfa")
+
+
+def check_import(modname):
+    return modname in sys.modules
 
 
 @contextmanager
@@ -86,28 +92,6 @@ def SuppressAllOutput(func):
         return result
 
     return wrapper
-
-
-def PathEx(p: str | Path) -> Path:
-    if p == ".":
-        return Path().cwd()
-    if not p:
-        return None
-    if "$" in str(p):
-        p = os.path.expandvars(p)
-    if isinstance(p, str):
-        p = Path(p)
-    if str(p).startswith("~"):
-        p = p.expanduser()
-    p = p.resolve(strict=False)
-    return p
-
-
-def PathExFile(p: str | Path):
-    p = PathEx(p)
-    if not p.is_file():
-        raise TypeError(f"{p!s} does not exist")
-    return p
 
 
 def sjoin(*a):
@@ -349,13 +333,20 @@ def jsondump(*args: list, **kwargs: dict) -> str:
     return json.dumps(*args, **kwargs)
 
 
-def IsIPython():
+def IsIPython() -> bool:
+    """Return one of None, console and jupyter"""
     try:
-        from IPython import get_ipython  # type: ignore
-        from IPython.display import clear_output, display
+        from IPython import get_ipython
 
-        return not sys.stdin.isatty()
-    except ImportError as e:
+        shell = get_ipython().__class__.__name__
+        if shell is None or shell == "NoneType":
+            return False
+        if shell == "TerminalInteractiveShell":
+            return "ipython_terminal"
+        if shell == "ZMQInteractiveShell":
+            return "jupyter/qt"
+        raise RuntimeError(f"Unknown value for shell: {shell}")
+    except (ImportError, RuntimeError, NameError):
         return False
 
 
@@ -1042,3 +1033,76 @@ def ErrorExitCleanup() -> None:
     clear_output_ex()
     sys.stdout.write(SHOW_CURSOR)
     sys.stdout.flush()
+
+
+def FuzzyMatchPath(target, pfunc=logger.info):
+    if not check_import("thefuzz.fuzz"):
+        raise OSError("Python package 'thefuzz' is not installed - pip install thefuzz")
+
+    if not (target.is_file() or target.is_dir()):
+        for p in target.parents[::-1]:
+            if p.is_dir():
+                continue
+            # pfunc(f"{p!s} is not a directory, now iterating for matches: {p.parent!s}")
+            closematch = None
+            highscore = 0
+            for real in p.parent.iterdir():
+                if not real.is_dir():
+                    continue
+                score = fuzz.ratio(real.name, p.name)
+                pfunc(p.name, real.name, score)
+                if score < 70:
+                    continue
+                if score > highscore:
+                    highscore = score
+                    closematch = p.parent / real.name
+            if closematch:
+                pfunc(f"The directory {p!s} does not exist, did you mean {closematch!s}?")
+            else:
+                pfunc(f"The directory {p!s} does not exist")
+            break
+        if not (target.is_file() or target.is_dir()):
+            closematch = None
+            highscore = 0
+            for real in target.parent.iterdir():
+                score = fuzz.ratio(real.name, target.name)
+                # pfunc(real.name, target.name, score)
+                if score < 70:
+                    continue
+                if score > highscore:
+                    highscore = score
+                    closematch = target.parent / real.name
+            if closematch:
+                pfunc(f"The file {target!s} does not exist, did you mean {closematch!s}?")
+            else:
+                pfunc(f"The file {target!s} does not exist")
+    return True
+
+
+def PathEx(p: str | Path | None = None, resolve=False, dofuzz=False, pfunc=printwarn) -> Path:
+    if not check_import("thefuzz.fuzz"):
+        dofuzz = False
+    if p is None:
+        return Path()
+    if p == ".":
+        return Path().cwd()
+    if not p:
+        return None
+    if "$" in str(p):
+        p = os.path.expandvars(p)
+    if isinstance(p, str):
+        p = Path(p)
+    if str(p).startswith("~"):
+        p = p.expanduser()
+    if dofuzz:
+        FuzzyMatchPath(p, pfunc=pfunc)
+    if resolve:
+        p = p.resolve(strict=False)
+    return p
+
+
+def PathExFile(p: str | Path):
+    p = PathEx(p)
+    if not p.is_file():
+        raise TypeError(f"{p!s} does not exist")
+    return p

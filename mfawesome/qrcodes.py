@@ -1,13 +1,18 @@
 from __future__ import annotations
 
 import base64
+import io
 import logging
 import random
 import traceback
 import urllib
+from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
 import cv2
+import PIL
+import PIL.Image
+import PIL.ImageDraw
 import qrcode
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import descriptor_pool, symbol_database
@@ -43,7 +48,7 @@ if TYPE_CHECKING:
 
 if IsIPython():
     from IPython import get_ipython  # type: ignore
-    from IPython.display import HTML, clear_output, display
+    from IPython.display import HTML, SVG, Image, clear_output, display
 
 logger = logging.getLogger("mfa")
 
@@ -181,6 +186,7 @@ def DisplayRawQR(filename: str | Path) -> None:
             traceback.print_exception(e2)
 
 
+# NEED METHOD FOR READING cv2.imread from BYTES - check work
 def ScanQRImage(filename: str | Path) -> tuple[str]:
     try:
         detector = cv2.wechat_qrcode_WeChatQRCode()
@@ -387,3 +393,30 @@ def ConvertAuthSecretsToDict(authsecrets: list[AuthSecret]) -> dict:
         if authsec.period:
             secrets[authsec.name]["period"] = authsec.period
     return secrets
+
+
+def pilimg2bytes(img: PIL.Image.Image, fmt="PNG") -> bytes:
+    buff = io.BytesIO()
+    img.save(buff, format=fmt)
+    return buff.getvalue()
+
+
+def generateqr(data: bytes | bytearray | memoryview | str) -> bytes:
+    qr = qrcode.QRCode()
+    qr.add_data(data)
+    qr.make(fit=True)
+    qrimg = qr.make_image()
+    pilimg = qrimg.get_image()
+    return pilimg, pilimg2bytes(pilimg)
+
+
+def mfa_generateqr(inp: str | bytes | memoryview | Path, output: str | Path | None = None):
+    if isinstance(inp, Path):
+        inp = PathEx(inp).read_bytes()
+    pilimg, data = generateqr(inp)
+    if output:
+        PathEx(output).write_bytes(data)
+        return None
+    if IsIPython():
+        return pilimg
+    return data
