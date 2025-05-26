@@ -15,14 +15,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from mfawesome.exception import (
-    NTPError,
-    NTPInvalidServerResponseError,
-    NTPTimeoutError,
-)
+from mfawesome.exception import NTPError, NTPInvalidServerResponseError, NTPTimeoutError
 from mfawesome.utils import TimeoutD
 
-logger = logging.getLogger("mfa")
+logger = logging.getLogger("mfa.ntp")
 
 LOCAL_TZINFO = datetime.now().astimezone().tzinfo
 
@@ -47,23 +43,9 @@ def ReverseDNS(ip, dnstimeout=0.5, nameservers=None):
 
 REF_TIME_1970 = 2208988800
 
-LEAP_TABLE: dict = {
-    0: "no warning",
-    1: "last minute of the day has 61 seconds",
-    2: "last minute of the day has 59 seconds",
-    3: "unknown (clock unsynchronized)",
-}
+LEAP_TABLE: dict = {0: "no warning", 1: "last minute of the day has 61 seconds", 2: "last minute of the day has 59 seconds", 3: "unknown (clock unsynchronized)"}
 
-MODE_TABLE: dict = {
-    0: "reserved",
-    1: "symmetric active",
-    2: "symmetric passive",
-    3: "client",
-    4: "server",
-    5: "broadcast",
-    6: "reserved for NTP control messages",
-    7: "reserved for private use",
-}
+MODE_TABLE: dict = {0: "reserved", 1: "symmetric active", 2: "symmetric passive", 3: "client", 4: "server", 5: "broadcast", 6: "reserved for NTP control messages", 7: "reserved for private use"}
 
 
 @dataclass
@@ -155,9 +137,7 @@ def ConvertRefIDX(i, peer_clock_stratum) -> str:
             try:
                 return struct.pack("!I", i).decode()
             except UnicodeDecodeError as e:
-                raise NTPInvalidServerResponseError(
-                    f"Converting the reference id failed - likely an invalid response from the NTP server.  refid: {i}  {peer_clock_stratum=}",
-                ) from e
+                raise NTPInvalidServerResponseError(f"Converting the reference id failed - likely an invalid response from the NTP server.  refid: {i}  {peer_clock_stratum=}") from e
         case 2:
             octs = []
             octs.append(str(i >> 24))
@@ -240,10 +220,7 @@ def RequestTime(timeserver: str, timeout: float = -1, port: int = 123) -> tuple[
         return data, ipaddress, sys_tx, sys_rcv
 
 
-def NTPTime(
-    timeserver: str,
-    timeout: float = 3.0,
-) -> NTPTimestamp:
+def NTPTime(timeserver: str, timeout: float = 3.0) -> NTPTimestamp:
     data, ipaddress, sys_tx, sys_rcv = RequestTime(timeserver=timeserver, timeout=timeout)  # type: ignore
     ntpraw = NTPRaw(*struct.unpack("!BBBbIIIQQQQ", data))  # type: ignore
     leap_indicator = LEAP_TABLE[ntpraw.flags >> 6]
@@ -722,7 +699,7 @@ NTPSERVERS = {
         "x.ns.gin.ntt.net": ["129.250.35.250", "2001:418:3ff::53"],
         "y.ns.gin.ntt.net": ["129.250.35.251", "2001:418:3ff::1:53"],
         "zeit.fu-berlin.de": ["160.45.10.8"],
-    },
+    }
 }
 
 NTPIPS = MakeIPDict(NTPSERVERS)

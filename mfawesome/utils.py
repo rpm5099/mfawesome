@@ -62,7 +62,7 @@ except ImportError:
 
 from mfawesome.exception import Invalid2FACodeError, ScreenResizeError
 
-logger = logging.getLogger("mfa")
+logger = logging.getLogger("mfa.utils")
 
 
 def check_import(modname):
@@ -276,14 +276,7 @@ def PrintStack(ipython_filter: bool = True) -> None:
         print((stackpos, entry.filename, entry.name, entry.lineno, entry.line))
 
 
-def makestr(
-    x: xAny,
-    encoding: str = "autodetect",
-    errors: str = "backslashreplace",
-    forcenoerror: bool = False,
-    delim: str = " ",
-    detectlimit: int = 200,
-) -> str:
+def makestr(x: xAny, encoding: str = "autodetect", errors: str = "backslashreplace", forcenoerror: bool = False, delim: str = " ", detectlimit: int = 200) -> str:
     r"""
     Error Types are:
         strict - raise error

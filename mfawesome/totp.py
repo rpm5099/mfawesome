@@ -21,14 +21,7 @@ from rich.text import Text
 
 from mfawesome.config import ConfigIO, FilterSecrets, SearchSecrets
 from mfawesome.countdownbars import Countdown, CountdownBars, DoubleCountdown, ProgBar
-from mfawesome.exception import (
-    KILLED,
-    ConfigError,
-    Invalid2FACodeError,
-    NoInternetError,
-    NTPError,
-    NTPInvalidServerResponseError,
-)
+from mfawesome.exception import KILLED, ConfigError, Invalid2FACodeError, NoInternetError, NTPError, NTPInvalidServerResponseError
 from mfawesome.ntptime import CorrectedTime
 from mfawesome.utils import (
     PRINT,
@@ -51,7 +44,7 @@ from mfawesome.utils import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-logger = logging.getLogger("mfa")
+logger = logging.getLogger("mfa.totp")
 
 # Global to hold ntp time class object for all calculations
 NTPCT = None
@@ -81,10 +74,7 @@ def totpcalc(secret: str, period_offset: int = 0) -> tuple[str, float]:
 
 def multitotpcalc(secret: str, codecount: int = 2) -> tuple[str, float]:
     """2fa"""
-    TOTPCode = namedtuple(
-        "TOTPCode",
-        ["code", "remaining", "untilvalid", "validtimestamp"],
-    )
+    TOTPCode = namedtuple("TOTPCode", ["code", "remaining", "untilvalid", "validtimestamp"])
     codes = []
     for i in range(codecount):
         code, remaining = totpcalc(secret, period_offset=i)
@@ -118,24 +108,17 @@ def dictgetstr(key: Any, adict: dict, errval: None = None) -> Any:
     return val if val is not None else ""
 
 
-def runhotp(
-    configfile: str | Path | None = None,
-    filterterm: str | None = None,
-    exact: bool = False,
-    showsecrets: bool = False,
-) -> None:
+def runhotp(configfile: str | Path | None = None, filterterm: str | None = None, exact: bool = False, showsecrets: bool = False) -> None:
     """Display matching HOTP results table"""
     with ConfigIO(configfile=configfile) as configio:
         secrets = configio.config["secrets"]
-        names = sorted(secrets.keys(), key=str.casefold)
+        names = sorted(secrets.keys(), key=str.casefold())
         names = [x for x in names if "hotp" in secrets[x]]
         names = [x for x in names if "counter" in secrets[x]]
         if filterterm is not None:
             names = [x for x in names if filterterm in x] if exact else FuzzyStrMatches(filterterm, names)
         if len(names) == 0:
-            raise ConfigError(
-                f"No matching HOTP codes found.  (filter term: {filterterm}).  Ensure that all HOTP entries in the config have both an 'hotp' and a 'counter' value.",
-            )
+            raise ConfigError(f"No matching HOTP codes found.  (filter term: {filterterm}).  Ensure that all HOTP entries in the config have both an 'hotp' and a 'counter' value.")
         HOTPResult = namedtuple("HOTPResult", ["name", "code", "counter", "user", "secret", "password", "url"])
         results = []
         for name in names:
@@ -145,15 +128,7 @@ def runhotp(
             hotpcode, hotpcounter = hotpcalc(hotpsecret, hotpcounter)
             configio._config["secrets"][name]["counter"] = hotpcounter
             # secretdata["counter"] = hotpcounter
-            result = HOTPResult(
-                name,
-                hotpcode,
-                str(hotpcounter),
-                dictgetstr("user", secretdata),
-                hotpsecret,
-                dictgetstr("password", secretdata),
-                dictgetstr("url", secretdata),
-            )
+            result = HOTPResult(name, hotpcode, str(hotpcounter), dictgetstr("user", secretdata), hotpsecret, dictgetstr("password", secretdata), dictgetstr("url", secretdata))
             results.append(result)
     if len(results) == 0:
         raise RuntimeError("There are no HOTP results, something is wrong")
@@ -285,14 +260,7 @@ class TFAResult:
 
 class TFAResults:
     def __init__(
-        self,
-        showsecrets: bool = False,
-        showerr: bool = False,
-        endtimer: bool = True,
-        clearscreen: bool = True,
-        mintime: float = 12.0,
-        now: bool = False,
-        timeservers: list | None = None,
+        self, showsecrets: bool = False, showerr: bool = False, endtimer: bool = True, clearscreen: bool = True, mintime: float = 12.0, now: bool = False, timeservers: list | None = None
     ) -> None:
         self.showsecrets = showsecrets
         self.showerr = showerr
@@ -307,28 +275,18 @@ class TFAResults:
         self.console = rich.console.Console()
         self.tfatable = rich.table.Table(
             # title=rich.text.Text("MFAwesome 2FA Results", style=rich.style.Style(reverse=True)),
-            title=rich.text.Text(
-                "MFAwesome 2FA TOTP Results",
-                style=rich.style.Style(bgcolor="white", color="black"),
-            ),
+            title=rich.text.Text("MFAwesome 2FA TOTP Results", style=rich.style.Style(bgcolor="white", color="black")),
             show_lines=True,
         )
         self.tfatable.add_column("Name", justify="left", min_width=20, max_width=50)
         self.tfatable.add_column("Code", justify="center", style="green", min_width=6)
-        self.tfatable.add_column(
-            "NextCode",
-            justify="center",
-            style="grey53",
-            min_width=6,
-        )
+        self.tfatable.add_column("NextCode", justify="center", style="grey53", min_width=6)
         self.tfatable.add_column("User", justify="center")
         self.fields = ["Name", "Code", "NextCode", "User"]
         if self.showsecrets:
             termwidth = get_term_size()[0]
             if termwidth < 120:
-                printwarn(
-                    f"Terminal size is only {termwidth} - output may be truncated",
-                )
+                printwarn(f"Terminal size is only {termwidth} - output may be truncated")
             self.fields += ["TOTP", "Password", "URL"]
             self.tfatable.add_column("TOTP", justify="center", style="yellow")
             self.tfatable.add_column("Password", justify="center", style="yellow")
@@ -456,7 +414,7 @@ def multitotp(
     init(timeservers)
     secrets = SearchSecrets(filterterm, secrets, exact=exact)
     secrets = FilterSecrets(secrets)
-    names = sorted(secrets.keys(), key=str.casefold)
+    names = sorted(secrets.keys(), key=str.casefold())
     names = [x for x in names if "totp" in secrets[x]]
     names = list(secrets.keys())
     if len(names) == 0:
@@ -466,14 +424,7 @@ def multitotp(
     logger.debug(f"{rt=} {mintime=} {now=}")
     if rt < mintime and now is False:
         Countdown(f"Waiting for new codes:", rt + 1)
-    tfaresults = TFAResults(
-        showsecrets=showsecrets,
-        showerr=showerr,
-        endtimer=endtimer,
-        clearscreen=clearscreen,
-        mintime=mintime,
-        now=now,
-    )
+    tfaresults = TFAResults(showsecrets=showsecrets, showerr=showerr, endtimer=endtimer, clearscreen=clearscreen, mintime=mintime, now=now)
     for name in names:
         secretdata = secrets[name]
         totp = secretdata.get("totp", "")
@@ -490,17 +441,7 @@ def multitotp(
                 thenextcode = codes[1]
                 nextcode = thenextcode.code
             result = TFAResult(
-                name=name,
-                totp=fix_b32decode_pad(totp),
-                code=str(code),
-                nextcode=str(nextcode),
-                user=user,
-                password=password,
-                url=url,
-                valid=True,
-                error=None,
-                showsecrets=showsecrets,
-                showerr=showerr,
+                name=name, totp=fix_b32decode_pad(totp), code=str(code), nextcode=str(nextcode), user=user, password=password, url=url, valid=True, error=None, showsecrets=showsecrets, showerr=showerr
             )
             tfaresults[result] = ...
         except (Invalid2FACodeError, NoInternetError, NTPError, NTPInvalidServerResponseError) as ivce:
@@ -574,24 +515,10 @@ def multitotp_continuous(
             if remaining > sessionremtime and remaining:
                 sessionremtime = remaining
             if IsIPython():
-                DoubleCountdown(
-                    s1="Codes Expire in: ",
-                    t1=remaining,
-                    s2="Session expiring in: ",
-                    t2=sessionremtime,
-                    killonfirst=True,
-                )
+                DoubleCountdown(s1="Codes Expire in: ", t1=remaining, s2="Session expiring in: ", t2=sessionremtime, killonfirst=True)
             else:
-                codesbar = ProgBar(
-                    msg="Codes Expire",
-                    timertime=remaining,
-                    fixedbartime=30.0,
-                )
-                sessionbar = ProgBar(
-                    msg="Session Expires",
-                    timertime=sessionremtime,
-                    fixedbartime=timelimit,
-                )
+                codesbar = ProgBar(msg="Codes Expire", timertime=remaining, fixedbartime=30.0)
+                sessionbar = ProgBar(msg="Session Expires", timertime=sessionremtime, fixedbartime=timelimit)
                 bars = CountdownBars([codesbar, sessionbar], systime=True)
                 while bars.Completed is False:
                     bars.update()

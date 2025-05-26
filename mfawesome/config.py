@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import textwrap
+from collections import OrderedDict
 from collections.abc import Callable
 from typing import TYPE_CHECKING
 
@@ -20,10 +21,7 @@ import yaml
 
 from mfawesome.exception import ConfigError, ConfigNotFoundError, EncryptionError, IncorrectPasswordOrSaltError, MFAwesomeError
 from mfawesome.logutils import NormalizeLogLevel
-from mfawesome.mfa_secrets import (
-    GetPassword,
-    ScryptChacha20Poly1305,
-)
+from mfawesome.mfa_secrets import GetPassword, ScryptChacha20Poly1305
 from mfawesome.qrcodes import ImportFromQRImage
 from mfawesome.utils import (
     CheckFile,
@@ -45,17 +43,9 @@ from mfawesome.utils import (
     resolvepath,
 )
 
-loglevels = {
-    "NOTSET": 0,
-    "DEBUG": 10,
-    "INFO": 20,
-    "WARN": 30,
-    "WARNING": 30,
-    "ERROR": 40,
-    "CRITICAL": 50,
-}
+loglevels = {"NOTSET": 0, "DEBUG": 10, "INFO": 20, "WARN": 30, "WARNING": 30, "ERROR": 40, "CRITICAL": 50}
 
-logger = logging.getLogger("mfa")
+logger = logging.getLogger("mfa.config")
 
 EXAMPLE_CONFIG = {
     "loglevel": "INFO",
@@ -68,44 +58,12 @@ EXAMPLE_CONFIG = {
             "notes": ["whatever", "I", "want", "here"],
             "whateveriwant": "also here",
         },
-        "BankSecret": {
-            "totp": "7GGJRU64KGSTQZOKUYXTOPQ6XLUPAMAJ2F4EZLE43Q2SRDTRLFAQ",
-            "user": "userx",
-            "password": "1qaz2wsx",
-            "notes": "2fa for my bank",
-        },
-        "__Disabled Secret": {
-            "totp": "OC3NY75ZQGDZFISL3OMWK32CEFLQBM4D7RJ4MEFVFUQKFOKIAV6Q",
-            "user": "disableduser",
-            "password": "disabledpassword",
-            "url": "https://disabled.com/login.html",
-        },
-        "testsecret1": {
-            "totp": "3GWDRDWOQRUIVBG3ONPMPNFCSCX43YSECZ7T4C2MTNPKZTMNHYLA",
-            "issuer": "theduke",
-            "algorithm": "SHA1",
-            "digits": 6,
-            "period": 30,
-        },
-        "testsecret2": {
-            "totp": "7K2TEZJRPPVBKAGUNGWS7R4GM77FWYKMLUVMCXLUBYYADUTZLOGQ",
-            "issuer": "theduke",
-            "algorithm": "SHA1",
-            "digits": 6,
-            "period": 30,
-        },
-        "testsecret3": {
-            "hotp": "VR6FTRQP3NEWDESH7AFJ7LFBAI3OEZIEOGGG3Y27QUISHVZLLQEA",
-            "counter": 12345,
-            "algorithm": "SHA1",
-            "digits": 6,
-            "period": 30,
-        },
-        "example_hotp_secret": {
-            "hotp": "3IWMLPFIZBYIOS7HRAAYENZGLEHUIUL5BYGWHVGGYJTMZVFL7GEQ",
-            "counter": 1234,
-            "notes": "The count will be automatically incremented",
-        },
+        "BankSecret": {"totp": "7GGJRU64KGSTQZOKUYXTOPQ6XLUPAMAJ2F4EZLE43Q2SRDTRLFAQ", "user": "userx", "password": "1qaz2wsx", "notes": "2fa for my bank"},
+        "__Disabled Secret": {"totp": "OC3NY75ZQGDZFISL3OMWK32CEFLQBM4D7RJ4MEFVFUQKFOKIAV6Q", "user": "disableduser", "password": "disabledpassword", "url": "https://disabled.com/login.html"},
+        "testsecret1": {"totp": "3GWDRDWOQRUIVBG3ONPMPNFCSCX43YSECZ7T4C2MTNPKZTMNHYLA", "issuer": "theduke", "algorithm": "SHA1", "digits": 6, "period": 30},
+        "testsecret2": {"totp": "7K2TEZJRPPVBKAGUNGWS7R4GM77FWYKMLUVMCXLUBYYADUTZLOGQ", "issuer": "theduke", "algorithm": "SHA1", "digits": 6, "period": 30},
+        "testsecret3": {"hotp": "VR6FTRQP3NEWDESH7AFJ7LFBAI3OEZIEOGGG3Y27QUISHVZLLQEA", "counter": 12345, "algorithm": "SHA1", "digits": 6, "period": 30},
+        "example_hotp_secret": {"hotp": "3IWMLPFIZBYIOS7HRAAYENZGLEHUIUL5BYGWHVGGYJTMZVFL7GEQ", "counter": 1234, "notes": "The count will be automatically incremented"},
     },
     "keylogprotection": False,
     "timeserver": "time.cloudflare.com",
@@ -115,13 +73,7 @@ EXAMPLE_CONFIG = {
 DEFAULT_CONFIG = {
     "loglevel": "INFO",
     "secrets": {
-        "__Example": {
-            "totp": "[secret totp code]",
-            "user": "[some user]",
-            "url": "https://www.madeupsite.org/login.html",
-            "notes": ["whatever", "I", "want", "here"],
-            "whateveriwant": "also here",
-        },
+        "__Example": {"totp": "[secret totp code]", "user": "[some user]", "url": "https://www.madeupsite.org/login.html", "notes": ["whatever", "I", "want", "here"], "whateveriwant": "also here"}
     },
     "keylogprotection": False,
     "timeserver": "time.cloudflare.com",
@@ -358,8 +310,20 @@ def Readyaml(fname: Path | str) -> str:
     return result
 
 
-def Writeyaml(fname: str, data: str) -> None:
-    Path(fname).write_text(yaml.safe_dump(data))
+def SortSecrets(secrets):
+    return OrderedDict(sorted(secrets.items(), key=lambda x: x[0].casefold()))
+
+
+def dump_ordered(dictionary):
+    """
+    Dump ordered dictionary
+    """
+    yaml.add_representer(OrderedDict, lambda dumper, data: dumper.represent_mapping("tag:yaml.org,2002:map", data.items()))
+    return yaml.dump(dictionary)
+
+
+def Writeyaml(fname: str, data: dict) -> None:
+    Path(fname).write_text(dump_ordered(data))
 
 
 def ReadConfigFile(fname: str | Path | None = None, testmode: bool = False) -> AnyStr:
@@ -377,6 +341,7 @@ def ReadConfigFile(fname: str | Path | None = None, testmode: bool = False) -> A
 
 def WriteConfigFile(fname: str | Path, config: dict) -> None:
     fname = PathEx(fname)
+    config["secrets"] = SortSecrets(config["secrets"])
     Writeyaml(fname, config)
     fname.chmod(0o600)
 
@@ -452,13 +417,7 @@ def SearchSecrets(filterterms: str | list, secrets: dict, exact: bool = False, s
 class ConfigIO:
     @bytifykw("ipassword")
     def __init__(
-        self,
-        config: dict | None = None,
-        configfile: str | Path | None = None,
-        ipassword: str | None = None,
-        maxtries: int = 3,
-        decrypt: bool = True,
-        getpassmsgstr: str = "MFAwesome secrets password",
+        self, config: dict | None = None, configfile: str | Path | None = None, ipassword: str | None = None, maxtries: int = 3, decrypt: bool = True, getpassmsgstr: str = "MFAwesome secrets password"
     ):
         self.ipassword = ipassword if ipassword else os.environ.get("MFAWESOME_PWD")
         self.maxtries = maxtries
@@ -509,7 +468,7 @@ class ConfigIO:
         secretsencrypted = CheckSecretsEncrypted(self.config["secrets"])
         if not secretsencrypted:
             printwarn(
-                f"Your secrets are not encrypted (or there are none entered).  Secrets can be added to your config file at {self.configfile!s}\n\tStrongly consider protecting them by using 'mfa --encryptsecrets', especially if this is not a machine you fully control.",
+                f"Your secrets are not encrypted (or there are none entered).  Secrets can be added to your config file at {self.configfile!s}\n\tStrongly consider protecting them by using 'mfa --encryptsecrets', especially if this is not a machine you fully control."
             )
         if secretsencrypted is True and self.decrypt:
             for i in range(self.maxtries):
@@ -617,13 +576,9 @@ class ConfigIO:
             raise ConfigError(f"Added secrets must be of type dict, not {type(newsecrets)}")
         for secretkey, secretdata in newsecrets.items():
             if not isinstance(secretdata, dict):
-                raise ConfigError(
-                    f'Secret must be in the this format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}\n\tInvalid secret: {secretkey}:{secretdata}',
-                )
+                raise ConfigError(f'Secret must be in the this format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}\n\tInvalid secret: {secretkey}:{secretdata}')
             if "totp" not in secretdata and "hotp" not in secretdata:
-                raise ConfigError(
-                    f"Added secrets must have a 'totp' or 'hotp' key: {secretkey}:{secretdata}",
-                )
+                raise ConfigError(f"Added secrets must have a 'totp' or 'hotp' key: {secretkey}:{secretdata}")
             if secretkey in self._config["secrets"]:
                 raise ConfigError(f"Cannot add secret with existing name: {secretkey}")
             self._config["secrets"][secretkey] = secretdata  # must use _config here to ensure that the nested dictionary secret gets updated
@@ -671,9 +626,7 @@ class ConfigIO:
             # Run test to ensure that secrets decrypt successfully
             scpcrypt2 = ScryptChacha20Poly1305(password)
             encrypted_secrets2 = "".join(final_encrypted_secrets).encode()
-            decrypted_secrets = json.loads(
-                gzip.decompress(scpcrypt2.Decrypt(encrypted_secrets2)),
-            )
+            decrypted_secrets = json.loads(gzip.decompress(scpcrypt2.Decrypt(encrypted_secrets2)))
             if decrypted_secrets != configcopy["secrets"]:
                 raise EncryptionError(f"Encryption validation failed with password {password}- secrets NOT encrypted")
         configcopy["secrets"] = final_encrypted_secrets

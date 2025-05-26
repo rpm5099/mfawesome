@@ -52,7 +52,7 @@ if IsIPython():
     from IPython import get_ipython  # type: ignore
     from IPython.display import HTML, SVG, Image, clear_output, display
 
-logger = logging.getLogger("mfa")
+logger = logging.getLogger("mfa.qr")
 
 MAXQRSIZE = 0x91B
 

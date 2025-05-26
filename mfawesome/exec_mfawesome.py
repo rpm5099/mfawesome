@@ -26,7 +26,7 @@ from mfawesome.qrcodes import ConvertAuthSecretsToDict, DisplayRawQR, ParseQRUrl
 from mfawesome.totp import runhotp
 from mfawesome.utils import SHOW_CURSOR, CheckFile, IsIPython, PathEx, PathExFile, check_yes_no, colors, jsondump, printcrit, printerr, printnorm, printok, printwarn, suppress_stderr_stdout
 
-logger = logging.getLogger("mfa")
+logger = logging.getLogger("mfa.exec")
 
 CFGFILE = None
 
