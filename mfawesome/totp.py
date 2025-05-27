@@ -112,7 +112,7 @@ def runhotp(configfile: str | Path | None = None, filterterm: str | None = None,
     """Display matching HOTP results table"""
     with ConfigIO(configfile=configfile) as configio:
         secrets = configio.config["secrets"]
-        names = sorted(secrets.keys(), key=str.casefold())
+        names = sorted(secrets.keys(), key=str.casefold)
         names = [x for x in names if "hotp" in secrets[x]]
         names = [x for x in names if "counter" in secrets[x]]
         if filterterm is not None:
@@ -414,7 +414,7 @@ def multitotp(
     init(timeservers)
     secrets = SearchSecrets(filterterm, secrets, exact=exact)
     secrets = FilterSecrets(secrets)
-    names = sorted(secrets.keys(), key=str.casefold())
+    names = sorted(secrets.keys(), key=str.casefold)
     names = [x for x in names if "totp" in secrets[x]]
     names = list(secrets.keys())
     if len(names) == 0:
