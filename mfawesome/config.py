@@ -312,7 +312,6 @@ def Readyaml(fname: Path | str) -> str:
 
 
 def SortSecrets(secrets):
-    printdbg(f"{secrets=}")
     if isinstance(secrets, list):
         return secrets
     return OrderedDict(sorted(secrets.items(), key=lambda x: x[0].casefold()))
