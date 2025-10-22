@@ -12,8 +12,6 @@ from pathlib import Path
 from pprint import pformat, pprint
 from typing import TYPE_CHECKING, NoReturn
 
-with suppress(Exception):
-    import argcomplete
 import rich
 
 import mfawesome
@@ -123,15 +121,15 @@ def Parse_Args(rawargs):
     runparser = AddRunOnlyArgs(runparser)
 
     # version parser
-    versionparser = subparsers.add_parser("version", help="Show version and exit")
+    # versionparser = subparsers.add_parser("version", help="Show version and exit")
 
     # test parser
-    testparser = subparsers.add_parser("tests", help="Run MFAwesome tests via pytests")
+    # testparser = subparsers.add_parser("tests", help="Run MFAwesome tests via pytests")
 
     # HOTP parser
     hotpparser = subparsers.add_parser("hotp", help="Display HOTP codes")
     hotpparser.add_argument("filterterm", nargs="?", help="Optional term to filter displayed secrets")
-    hotpparser.add_argument("-c", "--continuous", action="store_true", help="Enable continuous code display - default to 90 but add optional argument for otherwise")
+    hotpparser.add_argument("-c", "--continuous", action="store_true", help="Enable continuous code display - default to 90 but add optional -t argument for otherwise")
     hotpparser.add_argument("-e", "--exact", action="store_true", help="Disable fuzzy matching on secret filterterm")
     hotpparser.add_argument("-s", "--showsecrets", action="store_true", help="Enable showing secrets - WARNING: this will reveal sensitive information on your screen")
 
@@ -142,29 +140,35 @@ def Parse_Args(rawargs):
     config_subparsers = configparser.add_subparsers(title="mfa config commands", dest="config_command", help="Config file operations", metavar=config_metavar)
     genconfigparser = config_subparsers.add_parser("generate", help="Generate a new config file in the default location '$HOME/.config/mfawesome/mfawesome.conf'")
     genconfigparser.add_argument("outputconfigpath", nargs="?", help="Output location of the generated config file")
-    encryptconfig_parser = config_subparsers.add_parser("encrypt", help="Encrypt secrets in config file (if not already encrypted)")
-    decryptconfig_parser = config_subparsers.add_parser("decrypt", help="Permanently decrypt secrets in config file (if encrypted)")
+    # encryptconfig_parser = config_subparsers.add_parser("encrypt", help="Encrypt secrets in config file (if not already encrypted)")
+    # decryptconfig_parser = config_subparsers.add_parser("decrypt", help="Permanently decrypt secrets in config file (if encrypted)")
     exportconfig_parser = config_subparsers.add_parser("export", help="Export config to the specified file (required).  Keylog protection will be enabled.  Please see the documentation for details")
     exportconfig_parser.add_argument("outputconfigpath", nargs="?", help="Exported config file path.  Defaults to local directory")
     exportconfig_parser.add_argument("filterterm", nargs="?", help="Optional term to filter exported secrets")
     exportconfig_parser.add_argument("-e", "--exact", action="store_true", help="Disable fuzzy matching on secret filterterm")
-    printconfig_parser = config_subparsers.add_parser("print", help="Print entire unencrypted config and exit")
-    debugconfig_parser = config_subparsers.add_parser("debug", help="Show config file resolution details")
-    password_parser = config_subparsers.add_parser("password", help="Change password for secrets - unencrypted secrets are never written to disk")
+    # printconfig_parser = config_subparsers.add_parser("print", help="Print entire unencrypted config and exit")
+    # debugconfig_parser = config_subparsers.add_parser("debug", help="Show config file resolution details")
+    # password_parser = config_subparsers.add_parser("password", help="Change password for secrets - unencrypted secrets are never written to disk")
     # secrets parser
+
     secretsparser = subparsers.add_parser("secrets", help="Secrets related sub-commands")
-    secrets_metavar = "<search generate remove export importqr importurl>"
+    secrets_metavar = "<search generate remove export importqr importurl importjson update>"
     secrets_subparsers = secretsparser.add_subparsers(title="mfa secrets commands", dest="secrets_command", help="Secrets operations", metavar=secrets_metavar)
+
     # secrets subcommands
+
     searchsecrets_parser = secrets_subparsers.add_parser("search", help="Search through all secrets for a filtertem and display matching.")
     searchsecrets_parser.add_argument("searchterms", nargs="+", help="Search terms")
     searchsecrets_parser.add_argument("-e", "--exact", action="store_true", help="Disable fuzzy matching on secret filterterm")
-    generate_parser = secrets_subparsers.add_parser("generate", help="Generate and print an OTP secret key")
+    # generate_parser = secrets_subparsers.add_parser("generate", help="Generate and print an OTP secret key")
+
     remove_parser = secrets_subparsers.add_parser("remove", help="Remove a secret by specifying the secret name")
     remove_parser.add_argument("secretname", help="Name of secret to be removed")
+
     export_parser = secrets_subparsers.add_parser("export", help="Export codes in QR images to be scanned by Google Authenticator")
     export_parser.add_argument("exportdir", nargs="?", type=PathEx, const=Path().cwd(), help="Directory to export Google Authenticator secrets to")
     export_parser.add_argument("-f", "--filterterm", "--filter", help="Optional filter term for exported secrets")
+
     importqr_parser = secrets_subparsers.add_parser("importqr", help="Import codes from QR images")
     importqr_parser.add_argument("importdir", type=PathEx, help="Add secrets from QR images by specifying directory containing the images.")
     importjson_parser = secrets_subparsers.add_parser(
@@ -176,9 +180,16 @@ def Parse_Args(rawargs):
     importurl_parser = secrets_subparsers.add_parser("importurl", help="Add new secret in url format: otpauth://totp/[NAME]]?secret=[TOTP/HOTP]&issuer=[ISSUERNAME]")
     importurl_parser.add_argument("url", help="url format: otpauth://totp/[NAME]]?secret=[TOTP/HOTP]&issuer=[ISSUERNAME]")
 
+    updatesecret_parser = secrets_subparsers.add_parser("update", help="Update an existing secret")
+    updatesecret_parser.add_argument("secretname", help="Name of secret to be updated")
+    updatesecret_parser.add_argument(
+        "updatedict", help='Update metadata of a secret.  Must be in dict json format: {"someotherinfo":"NEWVALUE", "url":"https://newurl.example.com"}.  Multiple fields are acceptable'
+    )
+    # qread parser
     qread_parser = subparsers.add_parser("qread", help="Read QR image and output the raw data")
     qread_parser.add_argument("qrfile", type=PathExFile, help="QR file name")
 
+    # clock parser
     clockparser = subparsers.add_parser("clock", help="Display corrected time clock and system delta")
     clockparser.add_argument("n", nargs="?", type=int, default=180, help="Number of seconds to run the clock, default is 180s")
 
@@ -257,8 +268,7 @@ def Run(args):
         if args.showsecrets:
             printwarn("WARNING: Enabled showing secrets - this will reveal sensitive information on your screen!")
         secrets = configio.config["secrets"]
-        # timeserver = configio.config.get("timeserver", None)
-        # timeserver = timeserver if timeserver else config.LoadNTPServers()
+
         if args.continuous:
             totp.multitotp_continuous(
                 secrets,
@@ -435,6 +445,23 @@ def main(rawargs: list | tuple | None = None):
                     printerr(f'The provided secret could not be parsed: {args.secrettext}\nUse this format: {"secretname": {"totp":"SECRETCODE", "user":"theduke", "url":"www.example.com"}}')
                     return MFAExit(1)
                 configio.AddSecrets(newsecrets)
+                return MFAExit()
+
+        if args.secrets_command == "update":
+            logger.critical("Add a test for me - mfa secrets update")
+            with ConfigIORunWrapper(args, validate_config=False) as configio:
+                results = SearchSecrets(args.secretname, secrets=configio.config["secrets"], exact=True)
+                if len(results) == 0:
+                    err = f"No secrets found matching exact term(s): {args.secretname}"
+                    printerr(err)
+                elif len(results) > 1:
+                    printerr(f"Multiple secrets found matching exact term(s): {args.secretname}.  Please be more specific.")
+                try:
+                    secretsupdate = json.loads(args.updatedict)
+                except json.JSONDecodeError as e:
+                    printerr(f'The provided secret update could not be parsed: {args.updatedict}\nUse this format: {"moreinfo":"here"}')
+                    return MFAExit(1)
+                configio.UpdateSecret(args.secretname, secretsupdate)
                 return MFAExit()
 
     if args.mfa_command == "hotp":

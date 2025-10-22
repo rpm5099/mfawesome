@@ -368,7 +368,7 @@ def FilterSecrets(secrets: dict) -> dict:
     secretnames = list(secrets.keys())
     for secretname in secretnames:
         if secretname.startswith("__") or "totp" not in secrets[secretname]:
-            disabled.append(secrets.pop(secretname))  # noqa: PERF401
+            disabled.append(secrets.pop(secretname))
     logger.debug(f"{len(disabled)} Secrets filtered by TOTP")
     return secrets
 
@@ -595,6 +595,14 @@ class ConfigIO:
         Removed = {}
         Removed[secretname] = self._config["secrets"].pop(secretname)  # must use _config here to ensure that the nested dictionary secret gets updated
         printok(f"Secret removed: {Removed}")
+
+    def UpdateSecret(self, secretname: str, updatedata: dict) -> None:
+        if self.secretscount == 0:
+            raise ConfigError(f"The config file {self.configfile} contains no secrets")
+        if secretname not in self.config["secrets"]:
+            raise ConfigError(f"The secret {secretname} does not exist!")
+        self._config["secrets"][secretname].update(updatedata)
+        printok(f"Secret {secretname} updated with data: {updatedata}")
 
     def EncryptConfig(self, password: str | None = None, verify: bool = False, force: bool = True, config: dict | None = None) -> None:
         configprovided = False
