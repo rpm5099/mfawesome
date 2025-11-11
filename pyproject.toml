@@ -3,7 +3,7 @@ packages = [{ include = "mfawesome" }, { include = "mfawesome_tests" }]
 
 [project]
 name = "mfawesome"
-version = "0.1.83"
+version = "0.1.84"
 description = "Command line Multi-Factor TOTP Authenticator Tool"
 authors = [{ name = "Rob Milloy", email = "rob@milloy.net" }]
 license = "MIT"
