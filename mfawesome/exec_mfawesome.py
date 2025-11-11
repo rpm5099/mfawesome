@@ -152,7 +152,7 @@ def Parse_Args(rawargs):
     # secrets parser
 
     secretsparser = subparsers.add_parser("secrets", help="Secrets related sub-commands")
-    secrets_metavar = "<search generate remove export importqr importurl importjson update>"
+    secrets_metavar = "<search create remove export importqr importurl importjson update>"
     secrets_subparsers = secretsparser.add_subparsers(title="mfa secrets commands", dest="secrets_command", help="Secrets operations", metavar=secrets_metavar)
 
     # secrets subcommands
@@ -161,7 +161,7 @@ def Parse_Args(rawargs):
     searchsecrets_parser.add_argument("searchterms", nargs="+", help="Search terms")
     searchsecrets_parser.add_argument("-e", "--exact", action="store_true", help="Disable fuzzy matching on secret filterterm")
     # generate_parser = secrets_subparsers.add_parser("generate", help="Generate and print an OTP secret key")
-
+    create_parser = secrets_subparsers.add_parser("create", help="Create a new secret by specifying the secret details on the command line")
     remove_parser = secrets_subparsers.add_parser("remove", help="Remove a secret by specifying the secret name")
     remove_parser.add_argument("secretname", help="Name of secret to be removed")
 
@@ -379,6 +379,10 @@ def main(rawargs: list | tuple | None = None):
         MFAExit(1)
 
     if args.mfa_command == "secrets":
+        if args.secrets_command == "create":
+            printwarn(f"This function is not yet implemented: mfa secrets {args.secrets_command}")
+            return MFAExit(1)
+
         if args.secrets_command == "search":
             with ConfigIORunWrapper(args) as configio:
                 results = SearchSecrets(args.searchterms, secrets=configio.config["secrets"], exact=args.exact)
