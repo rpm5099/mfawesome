@@ -1,66 +1,86 @@
-[tool.project]
-license = { text = "MIT License" }
-repository = "https://github.com/rpm5099/mfawesome"
-keywords = ["totp", "hotp", "2fa", "mfa", "cli"]
-
-[tool.poetry]
+[project]
 name = "mfawesome"
-version = "0.1.80"
-description = "CLI Multi-Factor Authenticator Tool"
-authors = ["Rob Milloy <rob@milloy.net>"]
+version = "0.1.81"
+description = "Command line Multi-Factor TOTP Authenticator Tool"
+authors = [{ name = "Rob Milloy", email = "rob@milloy.net" }]
+license = "MIT"
 readme = "README.md"
-packages = [{ include = "mfawesome" }, { include = "mfawesome_tests" }]
+requires-python = ">= 3.10"
+keywords = [
+    "2fa",
+    "cli",
+    "totp",
+    "otp",
+    "two-factor",
+    "command-line",
+    "security",
+    "encryption",
+    "time-based",
+    "one-time",
+    "password",
+    "multi-factor",
+    "hotp",
+    "HMAC",
+    "authentication",
+]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: Console",
-    "Framework :: Jupyter",
-    "License :: Freeware",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
     "Natural Language :: English",
     "Operating System :: OS Independent",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Operating System :: Microsoft :: Windows",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
-    "Intended Audience :: Developers",
-    "Intended Audience :: End Users/Desktop",
-    "Intended Audience :: System Administrators",
-    "Topic :: Desktop Environment",
+    "Programming Language :: Python :: 3.14",
+    "Programming Language :: Python :: 3 :: Only",
+    "Topic :: Communications",
     "Topic :: Internet",
-    "Topic :: Internet :: WWW/HTTP",
-    "Topic :: Internet :: WWW/HTTP :: Session",
+    "Topic :: Internet :: WWW/HTTP :: Dynamic Content",
     "Topic :: Office/Business",
     "Topic :: Security",
     "Topic :: Security :: Cryptography",
-    "Topic :: System :: Systems Administration",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Archiving :: Backup",
+    "Topic :: System :: Systems Administration :: Authentication/Directory",
+    "Topic :: Terminals",
     "Topic :: Utilities",
+    "Topic :: System :: Systems Administration",
+    "Typing :: Typed",
+]
+dependencies = [
+    "rich",
+    "PyYAML",
+    "numpy",
+    "cryptography >= 42.0",
+    "opencv-contrib-python-headless >= 4.5",
+    "protobuf",
+    "qrcode[pil] >= 7.4",
 ]
 
-[tool.poetry.dependencies]
-python = ">= 3.10,< 4.0"
-rich = "*"
-PyYAML = "*"
-numpy = "*"
-cryptography = ">= 42.0"
-opencv-contrib-python-headless = ">= 4.5"
-protobuf = "*"
-qrcode = { extras = ["pil"], version = ">= 7.4" }
+[project.urls]
+Repository = "https://github.com/rpm5099/mfawesome"
 
-[tool.poetry.group.dev.dependencies]
-dnspython = { version = "*", optional = true }
-ruff = ">= 0.6.3"
-
-[tool.poetry.group.test.dependencies]
-pytest = ">= 8.3.3"
-pytest-cov = ">= 5.0.0"
-coverage = ">= 7.6.3"
-
-[tool.poetry.extras]
+[project.optional-dependencies]
 all = ["ruff", "pytest", "pytest-cov", "coverage", "dnspython"]
+dev = ["ruff", "pytest", "pytest-cov", "coverage"]
+test = ["pytest", "pytest-cov", "coverage"]
+dns = ["dnspython"]
 
-[tool.poetry.scripts]
+[project.scripts]
 mfa = "mfawesome.exec_mfawesome:main"
 mfaclock = "mfawesome.ntptime:Clock"
+
+[tool.poetry]
+packages = [{ include = "mfawesome" }, { include = "mfawesome_tests" }]
 
 [build-system]
 requires = ["poetry-core"]

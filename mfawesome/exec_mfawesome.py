@@ -136,19 +136,19 @@ def Parse_Args(rawargs):
     # config parser
     configparser = subparsers.add_parser("config", help="Config related sub-commands")
     # config subcommands
-    config_metavar = "<debug encrypt decrypt password print generate>"
+    config_metavar = "<generate encrypt decrypt export print debug password>"
     config_subparsers = configparser.add_subparsers(title="mfa config commands", dest="config_command", help="Config file operations", metavar=config_metavar)
     genconfigparser = config_subparsers.add_parser("generate", help="Generate a new config file in the default location '$HOME/.config/mfawesome/mfawesome.conf'")
     genconfigparser.add_argument("outputconfigpath", nargs="?", help="Output location of the generated config file")
-    # encryptconfig_parser = config_subparsers.add_parser("encrypt", help="Encrypt secrets in config file (if not already encrypted)")
-    # decryptconfig_parser = config_subparsers.add_parser("decrypt", help="Permanently decrypt secrets in config file (if encrypted)")
+    encryptconfig_parser = config_subparsers.add_parser("encrypt", help="Encrypt secrets in config file (if not already encrypted)")
+    decryptconfig_parser = config_subparsers.add_parser("decrypt", help="Permanently decrypt secrets in config file (if encrypted)")
     exportconfig_parser = config_subparsers.add_parser("export", help="Export config to the specified file (required).  Keylog protection will be enabled.  Please see the documentation for details")
     exportconfig_parser.add_argument("outputconfigpath", nargs="?", help="Exported config file path.  Defaults to local directory")
     exportconfig_parser.add_argument("filterterm", nargs="?", help="Optional term to filter exported secrets")
     exportconfig_parser.add_argument("-e", "--exact", action="store_true", help="Disable fuzzy matching on secret filterterm")
-    # printconfig_parser = config_subparsers.add_parser("print", help="Print entire unencrypted config and exit")
-    # debugconfig_parser = config_subparsers.add_parser("debug", help="Show config file resolution details")
-    # password_parser = config_subparsers.add_parser("password", help="Change password for secrets - unencrypted secrets are never written to disk")
+    printconfig_parser = config_subparsers.add_parser("print", help="Print entire unencrypted config and exit")
+    debugconfig_parser = config_subparsers.add_parser("debug", help="Show config file resolution details")
+    password_parser = config_subparsers.add_parser("password", help="Change password for secrets - unencrypted secrets are never written to disk")
     # secrets parser
 
     secretsparser = subparsers.add_parser("secrets", help="Secrets related sub-commands")
