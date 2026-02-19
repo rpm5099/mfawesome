@@ -9,86 +9,97 @@ on:
     types: [published]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   runtests:
     environment:
-        name: pypi
-        url: https://test.pypi.org/project/mfawesome/
+      name: pypi
+      url: https://test.pypi.org/project/mfawesome/
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
-    - name: cache poetry install
-      uses: actions/cache@v4
-      with:
-        path: ~/.local
-        key: poetry-1.8.4-0
-    
-    - uses: snok/install-poetry@v1
-      with:
-        version: 1.8.4
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-    
-    - name: cache deps
-      id: cache-deps
-      uses: actions/cache@v4
-      with:
-        path: .venv
-        key: pydeps-${{ hashFiles('**/poetry.lock') }}
+      - name: cache poetry install
+        uses: actions/cache@v4
+        with:
+          path: ~/.local
+          key: poetry-2.2.1-0
 
-    - name: Install Apt dependencies
-      uses: awalsh128/cache-apt-pkgs-action@latest
-      with:
-        packages: apt-utils libgl1
-        version: 1.0
+      - uses: snok/install-poetry@v1
+        with:
+          version: 2.2.1
+          virtualenvs-create: true
+          virtualenvs-in-project: true
 
-    - run: poetry install --no-interaction --no-root -E all
-      if: steps.cache-deps.outputs.cache-hit != 'true'
-    - run: poetry install --no-interaction -E all    
+      - name: cache deps
+        id: cache-deps
+        uses: actions/cache@v4
+        with:
+          path: .venv
+          key: pydeps-${{ hashFiles('**/poetry.lock') }}
 
-    - name: Run Tests with Poetry
-      run: |
-        poetry run pytest -vq
-        poetry run coverage run
-        poetry run coverage report
-        poetry run coverage xml
+      - name: Install Apt dependencies
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: apt-utils libgl1
+          version: 1.0
+
+      - run: poetry install --no-interaction --no-root -E all
+        if: steps.cache-deps.outputs.cache-hit != 'true'
+      - run: poetry install --no-interaction -E all
+
+      - name: Run Tests with Poetry
+        run: |
+          poetry run pytest -vq
+          poetry run coverage run
+          poetry run coverage report
+          poetry run coverage xml
 
   deploy:
     environment:
-        name: pypi
-        url: https://pypi.org/project/mfawesome/
+      name: pypi
+      url: https://pypi.org/project/mfawesome/
     runs-on: ubuntu-latest
     needs: [runtests]
     if: always() && needs.runtests.result == 'success'
     permissions:
-        id-token: write
-        attestations: write
+      id-token: write
+      attestations: write
+      contents: write
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
-    - name: Install dependencies
-      run: |
-        python3 -m pip install --upgrade pip setuptools wheel build
-    - name: Build package
-      run: python3 -m build
-    - name: Attest
-      uses: actions/attest-build-provenance@v2
-      with:
-        subject-path: '${{ github.workspace }}'
-    - name: Publish package
-      uses: pypa/gh-action-pypi-publish@release/v1
-      with:
-        verbose: true
-        repository-url: https://upload.pypi.org/legacy/
-      
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          python3 -m pip install --upgrade pip setuptools wheel build
+      - name: Build package
+        run: python3 -m build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfawesome-dist
+          path: dist/
+          retention-days: 90
+      - name: Attach to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+      - name: Attest
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: "${{ github.workspace }}/dist"
+      - name: Publish package
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          verbose: true
+          repository-url: https://upload.pypi.org/legacy/

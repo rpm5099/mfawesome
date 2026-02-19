@@ -13,7 +13,7 @@ import random
 import secrets
 import string
 import sys
-from typing import TypeVar
+from typing import Self, TypeVar
 
 import cryptography.exceptions
 from cryptography.hazmat.primitives.ciphers.aead import ChaCha20Poly1305
@@ -33,7 +33,7 @@ from mfawesome.exception import (
 )
 from mfawesome.utils import IsIPython, bytify, colors, printcrit, printdbg, printerr, printok, printwarn, stripcolors
 
-logger = logging.getLogger("mfa")
+logger = logging.getLogger("mfa.secrets")
 
 
 def MFAExit(code: int = 0, test: bool = False) -> None:
@@ -49,9 +49,7 @@ def MFAExit(code: int = 0, test: bool = False) -> None:
 
 def dohash(data, algorithm="sha512_256", rounds=1):
     if algorithm.lower() not in hashlib.algorithms_available:
-        raise ConfigError(
-            f"The hash algorithm {algorithm} is not available.  These are the available algorithms: {hashlib.algorithms_available}",
-        )
+        raise ConfigError(f"The hash algorithm {algorithm} is not available.  These are the available algorithms: {hashlib.algorithms_available}")
     if isinstance(data, str):
         data = data.encode()
     result = data
@@ -93,11 +91,7 @@ def PadBase64(s):
     raise ValueError(f"No valid padding found for {s}")
 
 
-def KeylogProtection(
-    description: str,
-    color1: str = "DEBUG_BLUE",
-    color2: str = "GREEN",
-):
+def KeylogProtection(description: str, color1: str = "DEBUG_BLUE", color2: str = "GREEN"):
     printwarn("Keylog protection enabled in config!")
     numbersonly = False
     allowedvals = list(string.ascii_letters + string.digits + string.punctuation)
@@ -109,29 +103,17 @@ def KeylogProtection(
     maxcols = 32
     allowedvals_chunks = [allowedvals[i : i + maxcols] for i in range(0, len(allowedvals), maxcols)]
     randomvals_chunks = [randomvals[i : i + maxcols] for i in range(0, len(randomvals), maxcols)]
-    chunks = [
-        list(zip(achunk, rchunk, strict=False))
-        for achunk, rchunk in zip(
-            allowedvals_chunks,
-            randomvals_chunks,
-            strict=False,
-        )
-    ]
+    chunks = [list(zip(achunk, rchunk, strict=False)) for achunk, rchunk in zip(allowedvals_chunks, randomvals_chunks, strict=False)]
 
     if len(chunks[-1]) < len(chunks[0]):
-        chunks[-1] = chunks[-1] + [
-            (
-                " ",
-                " ",
-            ),
-        ] * (len(chunks[0]) - len(chunks[-1]))
+        chunks[-1] = chunks[-1] + [(" ", " ")] * (len(chunks[0]) - len(chunks[-1]))
     print(f"{colors(color1, 'For')}    {colors(color2, 'Enter')}        " * len(chunks))
     for i in range(len(chunks[0])):
         equals = "=="
         if chunks[2][i][0] == " ":
             equals = "  "
         print(
-            f"{colors(color1, chunks[0][i][0])}  ==  {colors(color2, chunks[0][i][1])}            {colors(color1, chunks[1][i][0])}  ==  {colors(color2, chunks[1][i][1])}            {colors(color1, chunks[2][i][0])}  {equals}  {colors(color2, chunks[2][i][1])}",
+            f"{colors(color1, chunks[0][i][0])}  ==  {colors(color2, chunks[0][i][1])}            {colors(color1, chunks[1][i][0])}  ==  {colors(color2, chunks[1][i][1])}            {colors(color1, chunks[2][i][0])}  {equals}  {colors(color2, chunks[2][i][1])}"
         )
     entered = getpass.getpass(description)
     return "".join([allowedvals[randomvals.index(x)] for x in entered])
@@ -262,23 +244,12 @@ class ScryptChacha20Poly1305:
 
     def ValidateSelf(self) -> None:
         # logger.debug(f"{self.password=} {self.salt=} {self.length=} {self.cpucost=} {self.blocksize=} {self.parallelization=} {self.chacha_add=}")
-        if not all(
-            v is not None
-            for v in [
-                self.password,
-                self.salt,
-                self.length,
-                self.cpucost,
-                self.blocksize,
-                self.parallelization,
-                self.chacha_add,
-            ]
-        ):
+        if not all(v is not None for v in [self.password, self.salt, self.length, self.cpucost, self.blocksize, self.parallelization, self.chacha_add]):
             raise CryptographyError("Not all required fields have values been populated")
 
     @bytify
     @classmethod
-    def Create(cls: type[T], password: bytes):
+    def Create(cls, password: bytes):
         """
         Creates a new instance of the class with all of the same parameters except that
         the password can be changed.
@@ -287,14 +258,7 @@ class ScryptChacha20Poly1305:
 
     @bytify
     @staticmethod
-    def ScryptDerivePasswordKey(
-        password: bytes,
-        salt: bytes | None = None,
-        length: int = 32,
-        n: int = 2**14,
-        r: int = 8,
-        p: int = 1,
-    ) -> tuple[bytes, bytes]:
+    def ScryptDerivePasswordKey(password: bytes, salt: bytes | None = None, length: int = 32, n: int = 2**14, r: int = 8, p: int = 1) -> tuple[bytes, bytes]:
         """
         https://cryptography.io/en/latest/hazmat/primitives/key-derivation-functions/#scrypt
         https://www.tarsnap.com/scrypt/scrypt-slides.pdf
@@ -314,26 +278,15 @@ class ScryptChacha20Poly1305:
             raise KeyGenerationError(f"Failed to generate Scrypt key") from e
 
     @bytify
-    def ChaCha20Poly1305_Encrypt(
-        self,
-        data: bytes,
-    ) -> bytes:
+    def ChaCha20Poly1305_Encrypt(self, data: bytes) -> bytes:
         if self.key is None:
-            _salt, self.key = ScryptChacha20Poly1305.ScryptDerivePasswordKey(
-                password=self.password,
-                salt=self.salt,
-            )
+            _salt, self.key = ScryptChacha20Poly1305.ScryptDerivePasswordKey(password=self.password, salt=self.salt)
         chacha = ChaCha20Poly1305(self.key)
         encrypted = chacha.encrypt(self.nonce, data, self.chacha_add)
-        return b":".join(
-            [base64.b64encode(x) for x in (self.salt, self.nonce, self.chacha_add, encrypted)],
-        )
+        return b":".join([base64.b64encode(x) for x in (self.salt, self.nonce, self.chacha_add, encrypted)])
 
     @bytify
-    def ChaCha20Poly1305_Decrypt(
-        self,
-        data: bytes,
-    ) -> str:
+    def ChaCha20Poly1305_Decrypt(self, data: bytes) -> str:
         """Expects the data argument to contain colon separated hex encoded salt, nonce, add and encrypted message"""
         self.salt = None
         self.nonce = None
@@ -343,10 +296,7 @@ class ScryptChacha20Poly1305:
         if self.key is None:
             if not self.salt:
                 raise ValueError("You have to provide the key or the salt")
-            _salt, self.key = ScryptChacha20Poly1305.ScryptDerivePasswordKey(
-                password=self.password,
-                salt=self.salt,
-            )
+            _salt, self.key = ScryptChacha20Poly1305.ScryptDerivePasswordKey(password=self.password, salt=self.salt)
         chacha = ChaCha20Poly1305(self.key)
         return chacha.decrypt(self.nonce, encrypted, self.chacha_add)
 
@@ -364,8 +314,6 @@ class ScryptChacha20Poly1305:
             self.ValidateSelf()
             return self.ChaCha20Poly1305_Decrypt(data=data)
         except cryptography.exceptions.InvalidTag as e:
-            raise IncorrectPasswordOrSaltError(
-                "Cryptography error InvalidTag indicates incorrect password or salt",
-            ) from e
+            raise IncorrectPasswordOrSaltError("Cryptography error InvalidTag indicates incorrect password or salt") from e
         except Cryptography_Exceptions as e:
             raise DecryptionError("Decryption failed!") from e

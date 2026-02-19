@@ -23,13 +23,7 @@ class StdoutFormatter(logging.Formatter):
             logging.CRITICAL: colors("white_on_red", fmt),
         }
 
-        NCFORMATS = {
-            logging.DEBUG: fmt,
-            logging.INFO: fmt,
-            logging.WARNING: fmt,
-            logging.ERROR: fmt,
-            logging.CRITICAL: fmt,
-        }
+        NCFORMATS = {logging.DEBUG: fmt, logging.INFO: fmt, logging.WARNING: fmt, logging.ERROR: fmt, logging.CRITICAL: fmt}
         if nocolors:
             self.FORMATS = NCFORMATS
         else:

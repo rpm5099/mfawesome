@@ -3,10 +3,12 @@ from __future__ import annotations
 import concurrent.futures
 import ipaddress
 import logging
+import os
 import random
 import socket
 import statistics
 import struct
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -14,14 +16,10 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Any
 
-from mfawesome.exception import (
-    NTPError,
-    NTPInvalidServerResponseError,
-    NTPTimeoutError,
-)
+from mfawesome.exception import NTPError, NTPInvalidServerResponseError, NTPTimeoutError
 from mfawesome.utils import TimeoutD
 
-logger = logging.getLogger("mfa")
+logger = logging.getLogger("mfa.ntp")
 
 LOCAL_TZINFO = datetime.now().astimezone().tzinfo
 
@@ -46,23 +44,9 @@ def ReverseDNS(ip, dnstimeout=0.5, nameservers=None):
 
 REF_TIME_1970 = 2208988800
 
-LEAP_TABLE: dict = {
-    0: "no warning",
-    1: "last minute of the day has 61 seconds",
-    2: "last minute of the day has 59 seconds",
-    3: "unknown (clock unsynchronized)",
-}
+LEAP_TABLE: dict = {0: "no warning", 1: "last minute of the day has 61 seconds", 2: "last minute of the day has 59 seconds", 3: "unknown (clock unsynchronized)"}
 
-MODE_TABLE: dict = {
-    0: "reserved",
-    1: "symmetric active",
-    2: "symmetric passive",
-    3: "client",
-    4: "server",
-    5: "broadcast",
-    6: "reserved for NTP control messages",
-    7: "reserved for private use",
-}
+MODE_TABLE: dict = {0: "reserved", 1: "symmetric active", 2: "symmetric passive", 3: "client", 4: "server", 5: "broadcast", 6: "reserved for NTP control messages", 7: "reserved for private use"}
 
 
 @dataclass
@@ -113,6 +97,7 @@ class NTPTimestamp:
     systemtime_str: str
     corrected_time: float
     corrected_time_datetime: datetime
+    corrected_time_datetime: datetime
     corrected_time_str: str
     ntpraw: NTPRaw
 
@@ -154,9 +139,7 @@ def ConvertRefIDX(i, peer_clock_stratum) -> str:
             try:
                 return struct.pack("!I", i).decode()
             except UnicodeDecodeError as e:
-                raise NTPInvalidServerResponseError(
-                    f"Converting the reference id failed - likely an invalid response from the NTP server.  refid: {i}  {peer_clock_stratum=}",
-                ) from e
+                raise NTPInvalidServerResponseError(f"Converting the reference id failed - likely an invalid response from the NTP server.  refid: {i}  {peer_clock_stratum=}") from e
         case 2:
             octs = []
             octs.append(str(i >> 24))
@@ -230,8 +213,8 @@ def RequestTime(timeserver: str, timeout: float = -1, port: int = 123) -> tuple[
         data, ipaddress, sys_tx, sys_rcv = _RequestTime(timeserver, timeout, port)
         round_trip_time = sys_rcv - sys_tx
 
-        logger.debug(f"Got time from server {timeserver} {ipaddress} with length {len(data)} with round trip {(round_trip_time):.2f}s")
-    except (socket.gaierror, TimeoutError, NTPTimeoutError) as e:
+        logger.debug(f"Got time from server {timeserver} with IP:{ipaddress} with length {len(data)} with round trip {(round_trip_time):.2f}s")
+    except (socket.gaierror, TimeoutError, NTPTimeoutError, ConnectionResetError) as e:
         if isinstance(e, socket.gaierror):
             raise NTPTimeoutError(f"socket.gaierror indicates DNS or general network connection failure") from e
         raise NTPTimeoutError(f"Error contacting timeserver {timeserver}: {e!r} with timeout {timeout}") from e
@@ -239,10 +222,7 @@ def RequestTime(timeserver: str, timeout: float = -1, port: int = 123) -> tuple[
         return data, ipaddress, sys_tx, sys_rcv
 
 
-def NTPTime(
-    timeserver: str,
-    timeout: float = 3.0,
-) -> NTPTimestamp:
+def NTPTime(timeserver: str, timeout: float = 3.0) -> NTPTimestamp:
     data, ipaddress, sys_tx, sys_rcv = RequestTime(timeserver=timeserver, timeout=timeout)  # type: ignore
     ntpraw = NTPRaw(*struct.unpack("!BBBbIIIQQQQ", data))  # type: ignore
     leap_indicator = LEAP_TABLE[ntpraw.flags >> 6]
@@ -306,7 +286,8 @@ def PooledNTPTime(pool: int | list | set | tuple = 10, timeout: float = 1.0):
     def Task(server, timeout):
         try:
             result = NTPTime(server, timeout)
-        except NTPError as e:
+        # except NTPError as e:
+        except Exception as e:
             return e
         else:
             return result
@@ -337,8 +318,9 @@ def systime_offset(pool: int | list | set | tuple = 10, timeout: float = 1.0):
     stdev = statistics.stdev(offsets)
     mean = statistics.mean(offsets)
     percent_stdev = (stdev / mean) * 100
-    if percent_stdev > 200:
+    if percent_stdev > 300:
         raise NTPError(f"Standard deviation is {percent_stdev:.3f}% of mean - one or more time servers may be inaccurate")
+    return -mean
     return -mean
 
 
@@ -386,12 +368,21 @@ class CorrectedTime:
 
     def __init__(self, timeservers: int | list | tuple | set = 10):
         self._timeservers = timeservers
+        if envtservers := os.environ.get("TIMESERVERS"):
+            self._timeservers = envtservers.split(":")
+            logger.debug(f"Got time servers from environment variable: {self._timeservers}")
+
         self._time = None
+        self._systime = None
         self._systime = None
         self._init_time = time.time()
 
     @property
     def time(self):
+        if CorrectedTime.systimeoff is None:
+            CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
+        self._systime = time.time()
+        self._time = self._systime - CorrectedTime.systimeoff
         if CorrectedTime.systimeoff is None:
             CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
         self._systime = time.time()
@@ -435,13 +426,18 @@ class CorrectedTime:
         green = "\x1b[1m\x1b[32m"
         grey = "\x1b[90m"
         reset = "\x1b[0;0;39m"
-        for i in range(n * 5):
-            if i % 600 == 0:
-                self.resync()
-            ts = self.time
-            s = f"{green} Corrected Time: {CorrectedTime.ts2str(ts)} {grey} System Time: {CorrectedTime.ts2str(self._systime)} (Offset: {ndelta(round(CorrectedTime.systimeoff, 2))}s) {reset}      "
-            print(s, end="\r")
-            time.sleep(0.2)
+        try:
+            for i in range(n * 5):
+                if i % 600 == 0:
+                    self.resync()
+                ts = self.time
+                s = f"{green} Corrected Time: {CorrectedTime.ts2str(ts)} {grey} System Time: {CorrectedTime.ts2str(self._systime)} (Offset: {ndelta(round(CorrectedTime.systimeoff, 2))}s) {reset}      "
+                print(s, end="\r")
+                time.sleep(0.2)
+        except KeyboardInterrupt as e:
+            logger.debug("Got keyboard interrupt, exiting gracefully")
+            print()
+            sys.exit(0)
 
 
 def Clock(n: int = 180):
@@ -716,7 +712,7 @@ NTPSERVERS = {
         "x.ns.gin.ntt.net": ["129.250.35.250", "2001:418:3ff::53"],
         "y.ns.gin.ntt.net": ["129.250.35.251", "2001:418:3ff::1:53"],
         "zeit.fu-berlin.de": ["160.45.10.8"],
-    },
+    }
 }
 
 NTPIPS = MakeIPDict(NTPSERVERS)
