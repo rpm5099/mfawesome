@@ -20,7 +20,7 @@ from mfawesome.config import ConfigIO, FilterSecrets, GenerateDefaultConfig, Loa
 from mfawesome.exception import ArgumentError, ArgumentErrorIgnore, ConfigError, MFAwesomeError, QRImportNotSupportedError
 from mfawesome.mfa_secrets import GenerateSecret
 from mfawesome.ntptime import CorrectedTime
-from mfawesome.qrcodes import ConvertAuthSecretsToDict, DisplayRawQR, ParseQRUrl, QRExport
+from mfawesome.qrcodes import ConvertAuthSecretsToDict, DisplayRawQR, ParseQRUrl, QRExport, createqr
 from mfawesome.totp import runhotp
 from mfawesome.utils import SHOW_CURSOR, CheckFile, IsIPython, PathEx, PathExFile, check_yes_no, colors, jsondump, printcrit, printerr, printnorm, printok, printwarn, suppress_stderr_stdout
 
@@ -93,7 +93,7 @@ def RunParser(rawargs):
 
 def Parse_Args(rawargs):
     # Separate arg parser for default run mode
-    maincmds = ["run", "config", "secrets", "version", "hotp", "clock", "tests", "qread"]
+    maincmds = ["run", "config", "secrets", "version", "hotp", "clock", "tests", "qread", "createqr"]
     args = None
     if not any(x in rawargs for x in ["-h", "--help"]):
         try:
@@ -188,6 +188,11 @@ def Parse_Args(rawargs):
     # qread parser
     qread_parser = subparsers.add_parser("qread", help="Read QR image and output the raw data")
     qread_parser.add_argument("qrfile", type=PathExFile, help="QR file name")
+
+    # createqr parser
+    createqr_parser = subparsers.add_parser("createqr", help="Create a QR image from input data")
+    createqr_parser.add_argument("qrdata", help="Data to encode in the QR image")
+    createqr_parser.add_argument("-o", "--output", type=PathEx, default="qr.png", help="Output file for the QR image")
 
     # clock parser
     clockparser = subparsers.add_parser("clock", help="Display corrected time clock and system delta")
@@ -479,6 +484,10 @@ def main(rawargs: list | tuple | None = None):
 
     if args.mfa_command == "qread":
         DisplayRawQR(args.qrfile)
+        return MFAExit()
+
+    if args.mfa_command == "createqr":
+        createqr(args.qrdata, output=args.output)
         return MFAExit()
 
     if args.mfa_command == "clock":

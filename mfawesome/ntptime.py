@@ -172,10 +172,6 @@ def Time2Datetime(ts) -> datetime:
     return datetime.fromtimestamp(ts, tz=LOCAL_TZINFO)
 
 
-def Time2Datetime(ts) -> datetime:
-    return datetime.fromtimestamp(ts, tz=LOCAL_TZINFO)
-
-
 def Time2Str(ts):
     """
     Ts is equivalent to time.time() value
@@ -354,17 +350,6 @@ def MakeIPDict(ntps):
         for ip in v:
             ntpips[ip] = k
     return ntpips
-
-
-def ndelta(n: float) -> str:
-    udelta = "\u0394"
-    if n == 0:
-        posneg = ""
-    elif n > 0:
-        posneg = "+"
-    else:
-        posneg = "-"
-    return f"{udelta} {posneg}{abs(n)}"
 
 
 def ndelta(n: float) -> str:

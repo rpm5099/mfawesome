@@ -3,7 +3,7 @@ packages = [{ include = "mfawesome" }, { include = "mfawesome_tests" }]
 
 [project]
 name = "mfawesome"
-version = "0.1.90"
+version = "0.1.91"
 description = "CLI multi-factor authenticator: TOTP/HOTP 2FA/MFA codes in the terminal, encrypted secrets storage, Google Authenticator QR import/export, NTP time sync, fuzzy search"
 authors = [{ name = "Rob Milloy", email = "rob@milloy.net" }]
 license = "MIT"

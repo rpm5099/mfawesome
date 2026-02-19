@@ -405,7 +405,7 @@ def pilimg2bytes(img: PIL.Image.Image, fmt="PNG") -> bytes:
     return buff.getvalue()
 
 
-def generateqr(data: bytes | bytearray | memoryview | str) -> bytes:
+def generateqr(data: bytes | bytearray | memoryview | str) -> tuple[PIL.Image.Image, bytes]:
     qr = qrcode.QRCode()
     qr.add_data(data)
     qr.make(fit=True)
@@ -414,7 +414,7 @@ def generateqr(data: bytes | bytearray | memoryview | str) -> bytes:
     return pilimg, pilimg2bytes(pilimg)
 
 
-def mfa_generateqr(inp: str | bytes | memoryview | Path, output: str | Path | None = None):
+def mfa_generateqr(inp: str | bytes | memoryview | Path, output: str | Path | None = None) -> PIL.Image.Image:
     if isinstance(inp, Path):
         inp = PathEx(inp).read_bytes()
     pilimg, data = generateqr(inp)
@@ -424,3 +424,28 @@ def mfa_generateqr(inp: str | bytes | memoryview | Path, output: str | Path | No
     if IsIPython():
         return pilimg
     return data
+
+
+def display_image(image: PIL.Image.Image | bytes) -> bool:
+    try:
+        from IPython import get_ipython
+        from IPython.display import Image as IPythonImage
+        from IPython.display import display
+
+        if get_ipython().__class__.__name__ != "ZMQInteractiveShell":
+            return False
+        display(IPythonImage(data=image if isinstance(image, bytes) else image.tobytes()))
+        return True
+    except Exception:
+        return False
+
+
+def createqr(inp: str | bytes | memoryview | Path, output: str | Path | None = None) -> None:
+    pilimg, data = generateqr(inp)
+    dispres = display_image(data)
+    if dispres is False and output is None:
+        output = "qr.png"
+    if output:
+        opf = Path(output).resolve()
+        opf.write_bytes(data)
+        print(f"QR written to {opf!s}")

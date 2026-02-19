@@ -62,6 +62,9 @@ except ImportError:
 
 from mfawesome.exception import Invalid2FACodeError, ScreenResizeError
 
+if TYPE_CHECKING:
+    import PIL.Image
+
 logger = logging.getLogger("mfa.utils")
 
 
@@ -329,7 +332,7 @@ def jsondump(*args: list, **kwargs: dict) -> str:
 def IsIPython() -> bool:
     """Return one of None, console and jupyter"""
     try:
-        from IPython import get_ipython
+        from IPython.core import get_ipython
 
         shell = get_ipython().__class__.__name__
         if shell is None or shell == "NoneType":
@@ -341,6 +344,21 @@ def IsIPython() -> bool:
         raise RuntimeError(f"Unknown value for shell: {shell}")
     except (ImportError, RuntimeError, NameError):
         return False
+
+
+def can_display_image(image: PIL.Image.Image | None = None) -> bool:
+    try:
+        from IPython.core import get_ipython
+        from IPython.display import Image, display
+
+        ip = get_ipython()
+        if ip is None:
+            return False
+        shell = ip.__class__.__name__
+    except ImportError:
+        return False
+    else:
+        return shell in ("ZMQInteractiveShell",)
 
 
 if IsIPython():
