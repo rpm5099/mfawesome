@@ -97,6 +97,7 @@ class NTPTimestamp:
     systemtime_str: str
     corrected_time: float
     corrected_time_datetime: datetime
+    corrected_time_datetime: datetime
     corrected_time_str: str
     ntpraw: NTPRaw
 
@@ -165,6 +166,10 @@ def ConvertRefID(idi: int) -> str:
 
 def seconds2ms(t):
     return int(round(t * 1000, 0))
+
+
+def Time2Datetime(ts) -> datetime:
+    return datetime.fromtimestamp(ts, tz=LOCAL_TZINFO)
 
 
 def Time2Datetime(ts) -> datetime:
@@ -320,6 +325,7 @@ def systime_offset(pool: int | list | set | tuple = 10, timeout: float = 1.0):
     if percent_stdev > 300:
         raise NTPError(f"Standard deviation is {percent_stdev:.3f}% of mean - one or more time servers may be inaccurate")
     return -mean
+    return -mean
 
 
 def timestamp(pool: int | list | set | tuple = 10, timeout: float = 1.0):
@@ -361,6 +367,17 @@ def ndelta(n: float) -> str:
     return f"{udelta} {posneg}{abs(n)}"
 
 
+def ndelta(n: float) -> str:
+    udelta = "\u0394"
+    if n == 0:
+        posneg = ""
+    elif n > 0:
+        posneg = "+"
+    else:
+        posneg = "-"
+    return f"{udelta} {posneg}{abs(n)}"
+
+
 class CorrectedTime:
     systimeoff: float | None = None
 
@@ -372,10 +389,15 @@ class CorrectedTime:
 
         self._time = None
         self._systime = None
+        self._systime = None
         self._init_time = time.time()
 
     @property
     def time(self):
+        if CorrectedTime.systimeoff is None:
+            CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
+        self._systime = time.time()
+        self._time = self._systime - CorrectedTime.systimeoff
         if CorrectedTime.systimeoff is None:
             CorrectedTime.systimeoff = systime_offset(pool=self._timeservers)
         self._systime = time.time()
