@@ -3,14 +3,15 @@ packages = [{ include = "mfawesome" }, { include = "mfawesome_tests" }]
 
 [project]
 name = "mfawesome"
-version = "0.1.85"
-description = "Command line Multi-Factor TOTP Authenticator Tool"
+version = "0.1.86"
+description = "CLI multi-factor authenticator: TOTP/HOTP 2FA/MFA codes in the terminal, encrypted secrets storage, Google Authenticator QR import/export, NTP time sync, fuzzy search"
 authors = [{ name = "Rob Milloy", email = "rob@milloy.net" }]
 license = "MIT"
 readme = "README.md"
 requires-python = ">= 3.10"
 keywords = [
     "2fa",
+    "mfa",
     "cli",
     "totp",
     "otp",
@@ -19,12 +20,17 @@ keywords = [
     "security",
     "encryption",
     "time-based",
-    "one-time",
-    "password",
+    "one-time-password",
     "multi-factor",
     "hotp",
     "HMAC",
     "authentication",
+    "authenticator",
+    "google-authenticator",
+    "terminal",
+    "qrcode",
+    "secrets",
+    "mfawesome",
 ]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
@@ -71,7 +77,9 @@ dependencies = [
 
 
 [project.urls]
+Homepage = "https://github.com/rpm5099/mfawesome"
 Repository = "https://github.com/rpm5099/mfawesome"
+"Bug Tracker" = "https://github.com/rpm5099/mfawesome/issues"
 
 [project.optional-dependencies]
 all = ["ruff", "pytest", "pytest-cov", "coverage", "dnspython"]

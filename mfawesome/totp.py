@@ -406,7 +406,6 @@ def multitotp(
     :return: Nothing
     :rtype: None
     """
-    logger.critical("multitotp starting")
     init(timeservers)
     secrets = SearchSecrets(filterterm, secrets, exact=exact)
     secrets = FilterSecrets(secrets)

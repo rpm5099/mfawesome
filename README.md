@@ -1,3 +1,5 @@
+[![PyPI](https://img.shields.io/pypi/v/mfawesome)](https://pypi.org/project/mfawesome)
+[![PyPI - Downloads](https://img.shields.io/pypi/dm/mfawesome)](https://pypi.org/project/mfawesome)
 
 <div align="center">
     <h1><img src="https://github.com/rpm5099/mfawesome/blob/e22d7b1387ec9e6492e82327da3c17fd543c585d/images/lock_logo_3d_400.png?raw=true"/></h1>

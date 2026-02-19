@@ -9,7 +9,7 @@ on:
     types: [published]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   runtests:
@@ -71,6 +71,7 @@ jobs:
     permissions:
       id-token: write
       attestations: write
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -82,10 +83,21 @@ jobs:
           python3 -m pip install --upgrade pip setuptools wheel build
       - name: Build package
         run: python3 -m build
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mfawesome-dist
+          path: dist/
+          retention-days: 90
+      - name: Attach to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
       - name: Attest
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: "${{ github.workspace }}"
+          subject-path: "${{ github.workspace }}/dist"
       - name: Publish package
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
