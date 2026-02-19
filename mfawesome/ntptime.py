@@ -8,6 +8,7 @@ import random
 import socket
 import statistics
 import struct
+import sys
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -418,13 +419,18 @@ class CorrectedTime:
         green = "\x1b[1m\x1b[32m"
         grey = "\x1b[90m"
         reset = "\x1b[0;0;39m"
-        for i in range(n * 5):
-            if i % 600 == 0:
-                self.resync()
-            ts = self.time
-            s = f"{green} Corrected Time: {CorrectedTime.ts2str(ts)} {grey} System Time: {CorrectedTime.ts2str(self._systime)} (Offset: {ndelta(round(CorrectedTime.systimeoff, 2))}s) {reset}      "
-            print(s, end="\r")
-            time.sleep(0.2)
+        try:
+            for i in range(n * 5):
+                if i % 600 == 0:
+                    self.resync()
+                ts = self.time
+                s = f"{green} Corrected Time: {CorrectedTime.ts2str(ts)} {grey} System Time: {CorrectedTime.ts2str(self._systime)} (Offset: {ndelta(round(CorrectedTime.systimeoff, 2))}s) {reset}      "
+                print(s, end="\r")
+                time.sleep(0.2)
+        except KeyboardInterrupt as e:
+            logger.debug("Got keyboard interrupt, exiting gracefully")
+            print()
+            sys.exit(0)
 
 
 def Clock(n: int = 180):

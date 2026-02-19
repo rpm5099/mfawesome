@@ -7,7 +7,7 @@ import sys
 
 from mfawesome.utils import PrintStack, colors, flatten, printcrit, printdbg
 
-LOGGERNAME = "mfa.logutils"
+LOGGERNAME = "mfa"
 
 
 class StdoutFormatter(logging.Formatter):

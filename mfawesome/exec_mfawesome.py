@@ -268,7 +268,6 @@ def Run(args):
         if args.showsecrets:
             printwarn("WARNING: Enabled showing secrets - this will reveal sensitive information on your screen!")
         secrets = configio.config["secrets"]
-
         if args.continuous:
             totp.multitotp_continuous(
                 secrets,
@@ -323,6 +322,7 @@ def main(rawargs: list | tuple | None = None):
         raise ArgumentError(f"Arguments provided to mfa main must be a str, list or tuple: {type(rawargs)}")
     args = Parse_Args(rawargs)
     logger = logutils.SetupLogging(level=args.loglevel)
+    logger.debug(args)
     if "mfa_command" not in args.__dict__:
         logger.debug(f"Run mode enabled: {args}")
         Run(args)

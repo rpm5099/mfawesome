@@ -292,8 +292,8 @@ class TFAResults:
             self.tfatable.add_column("Password", justify="center", style="yellow")
             self.tfatable.add_column("URL", justify="center", style="blue")
         self.results = {}
-        # self.remaining = 30
         self.ipython = IsIPython()
+        self._needs_recalc = False
 
     def __setitem__(self, tfaresult: TFAResult, _) -> None:
         """
@@ -307,7 +307,6 @@ class TFAResults:
         tfaresult.showerr = self.showerr
         tfaresult.showsecrets = self.showsecrets
         self.results[tfaresult.name] = tfaresult
-        # self.remaining = tfaresult.remaining
 
     def __getitem__(self, name: str) -> object:
         """
@@ -331,14 +330,14 @@ class TFAResults:
         :return: _description_
         :rtype: _type_
         """
+        logger.debug("ShowCodes starting")
         repeat = False
         fields = [x.lower() for x in self.fields]
         for result in self.results.values():
             self.tfatable.add_row(*result.get_fields_as_tuple(fields))
         try:
-            # logger.debug(f"{RemainingTime(self.ntpo)=} {self.remaining=}")
             self.remaining = RemainingTime()
-            # logger.debug(f"{self.remaining=} {self.mintime=} {self.now=}")
+            logger.debug(f"{self.remaining=} {self.mintime=} {self.now=}")
             if self.remaining < self.mintime:
                 if self.now is False:
                     Countdown(f"Waiting for new codes:", self.remaining + 1)
@@ -347,10 +346,6 @@ class TFAResults:
             print("\n")
             self.console.print(self.tfatable)
             if self.endtimer:
-                # Clock timers disabled in favor of using bars, unless the bars cause problems
-                # Countdown("Codes expiring in: ", self.remaining)
-                # CountdownBar(msg="Codes expiring in: ", timertime=self.remaining).begin()
-
                 progbar = ProgBar(msg="Codes expiring in", timertime=self.remaining, fixedbartime=30)
                 if self.ipython:  # noqa: SIM108
                     cbars = CountdownBars(progbar, freq=0.2, systime=True, textabove=self.tfatable)
@@ -363,8 +358,8 @@ class TFAResults:
             else:
                 PRINT(f"Codes expiring in: {colors('green', int(self.remaining))}", end="\r")
             if repeat and self.endtimer:
-                repeat = False
-                self.ShowCodes()
+                logger.debug("Codes nearly expired on display - flagging for recalc")
+                self._needs_recalc = True
         except KeyboardInterrupt as e:
             raise KILLED(f"Got keyboard interrupt with {self.remaining:0.1f}s remaining!") from e
         finally:
@@ -411,6 +406,7 @@ def multitotp(
     :return: Nothing
     :rtype: None
     """
+    logger.critical("multitotp starting")
     init(timeservers)
     secrets = SearchSecrets(filterterm, secrets, exact=exact)
     secrets = FilterSecrets(secrets)
@@ -460,7 +456,56 @@ def multitotp(
             )
             tfaresults[result] = ...
             continue
-    return tfaresults.ShowCodes()
+    while True:
+        remaining = tfaresults.ShowCodes()
+        if not tfaresults._needs_recalc:
+            return remaining
+        tfaresults = TFAResults(showsecrets=showsecrets, showerr=showerr, endtimer=endtimer, clearscreen=clearscreen, mintime=mintime, now=now)
+        for name in names:
+            secretdata = secrets[name]
+            totp = secretdata.get("totp", "")
+            user = secretdata.get("user", "")
+            password = secretdata.get("password", "") if secretdata.get("password", "") is not None else ""
+            url = secretdata.get("url", "") if secretdata.get("url", "") is not None else ""
+            code = ""
+            nextcode = ""
+            try:
+                if totp:
+                    codes = multitotpcalc(totp, codecount=2)
+                    thiscode = codes[0]
+                    code = thiscode.code
+                    thenextcode = codes[1]
+                    nextcode = thenextcode.code
+                result = TFAResult(
+                    name=name,
+                    totp=fix_b32decode_pad(totp),
+                    code=str(code),
+                    nextcode=str(nextcode),
+                    user=user,
+                    password=password,
+                    url=url,
+                    valid=True,
+                    error=None,
+                    showsecrets=showsecrets,
+                    showerr=showerr,
+                )
+                tfaresults[result] = ...
+            except (Invalid2FACodeError, NoInternetError, NTPError, NTPInvalidServerResponseError) as ivce:
+                result = TFAResult(
+                    name=name,
+                    totp=fix_b32decode_pad(totp),
+                    code=str(code),
+                    nextcode=str(nextcode),
+                    user=user,
+                    password=password,
+                    url=url,
+                    valid=False,
+                    error=ivce,
+                    showsecrets=showsecrets,
+                    showerr=showerr,
+                )
+                tfaresults[result] = ...
+                continue
 
 
 def multitotp_continuous(
