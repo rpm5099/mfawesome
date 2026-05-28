@@ -56,3 +56,4 @@ internal/tmp
 internal
 poetry.lock
 *.code-workspace
+copilot-instructions.md
