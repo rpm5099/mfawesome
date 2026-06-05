@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import hashlib
-import hmac
 import logging
-import struct
+import os
 import sys
 import time
 from collections import namedtuple
@@ -22,14 +20,13 @@ from rich.text import Text
 from mfawesome.config import ConfigIO, FilterSecrets, SearchSecrets
 from mfawesome.countdownbars import Countdown, CountdownBars, DoubleCountdown, ProgBar
 from mfawesome.exception import KILLED, ConfigError, Invalid2FACodeError, NoInternetError, NTPError, NTPInvalidServerResponseError
-from mfawesome.ntptime import CorrectedTime
+from mfawesome.tui import run_tui
 from mfawesome.utils import (
     PRINT,
     SHOW_CURSOR,
     FindStrMatch,
     FuzzyStrMatches,
     IsIPython,
-    b32decode,
     clear_output_ex,
     colors,
     colorstring,
@@ -46,60 +43,10 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger("mfa.totp")
 
-# Global to hold ntp time class object for all calculations
-NTPCT = None
-
-
-def init(timeservers):
-    global NTPCT
-    NTPCT = CorrectedTime(timeservers)
-
-
-def totpcalc(secret: str, period_offset: int = 0) -> tuple[str, float]:
-    """2fa"""
-    secret = secret.replace("\t", "")
-    ts = NTPCT.time + (30.0 * period_offset)
-    periodnum = int(ts / 30.0)
-    key = b32decode(secret.upper())
-    b = struct.pack(">q", int(periodnum))
-    hm = hmac.HMAC(key, b, hashlib.sha1).digest()
-    offset = hm[-1] & 0x0F
-    truncatedHash = hm[offset : offset + 4]
-    code = struct.unpack(">L", truncatedHash)[0]
-    code &= 0x7FFFFFFF
-    code %= 1000000
-    final = str(code).zfill(6)
-    return final, RemainingTime(period_offset)
-
-
-def multitotpcalc(secret: str, codecount: int = 2) -> tuple[str, float]:
-    """2fa"""
-    TOTPCode = namedtuple("TOTPCode", ["code", "remaining", "untilvalid", "validtimestamp"])
-    codes = []
-    for i in range(codecount):
-        code, remaining = totpcalc(secret, period_offset=i)
-        uv = remaining - 30.0
-        TCode = TOTPCode(code, remaining, uv, gettime(NTPCT.time))
-        codes.append(TCode)
-    return codes
-
-
-def hotpcalc(secret: str, count: int) -> str:
-    """2fa"""
-    count = int(count)
-    count += 1
-    if count < 0:
-        raise ValueError(f"HOTP count argument must be a positive integer")
-    secret = secret.replace("\t", "")
-    key = b32decode(secret.upper())
-    b = struct.pack(">q", int(count))
-    hm = hmac.HMAC(key, b, hashlib.sha1).digest()
-    offset = hm[-1] & 0x0F
-    truncatedHash = hm[offset : offset + 4]
-    code = struct.unpack(">L", truncatedHash)[0]
-    code &= 0x7FFFFFFF
-    code %= 1000000
-    return str(code).zfill(6), count
+# Calc primitives live in totpcore.py; re-export so existing
+# `from mfawesome.totp import totpcalc, ...` callers keep working.
+from mfawesome import totpcore as _totpcore
+from mfawesome.totpcore import RemainingTime, hotpcalc, init, multitotpcalc, totpcalc
 
 
 def dictgetstr(key: Any, adict: dict, errval: None = None) -> Any:
@@ -155,10 +102,6 @@ def runhotp(configfile: str | Path | None = None, filterterm: str | None = None,
             tfatable.add_row(*list(result)[:-4])
     print("\n")
     console.print(tfatable)
-
-
-def RemainingTime(period_offset: int = 0) -> float:
-    return float(30.0 - (NTPCT.time % 30)) + (30.0 * period_offset)
 
 
 @dataclass
@@ -270,7 +213,7 @@ class TFAResults:
         self.now = now
         self.timeservers = timeservers
         # self.ntpo = ntptime.NTPTime(updatenow=False)
-        self.ntpo = NTPCT
+        self.ntpo = _totpcore.NTPCT
         self.remaining = 0.0
         self.console = rich.console.Console()
         self.tfatable = rich.table.Table(
@@ -368,6 +311,20 @@ class TFAResults:
         return self.remaining
 
 
+def _use_tui() -> bool:
+    """Return True when an interactive Textual UI should be used.
+    False for IPython, non-TTY stdout/stdin (pipe/redirect), or when MFA_NO_TUI=1.
+    """
+    if os.environ.get("MFA_NO_TUI") == "1":
+        return False
+    if IsIPython():
+        return False
+    try:
+        return sys.stdout.isatty() and sys.stdin.isatty()
+    except Exception:
+        return False
+
+
 def multitotp(
     secrets: dict,
     now: bool = False,
@@ -407,6 +364,9 @@ def multitotp(
     :rtype: None
     """
     init(timeservers)
+    if _use_tui():
+        run_tui(secrets=secrets, showsecrets=showsecrets, showerr=showerr, timelimit=None, filterterm=filterterm, exact=exact)
+        return None
     secrets = SearchSecrets(filterterm, secrets, exact=exact)
     secrets = FilterSecrets(secrets)
     names = sorted(secrets.keys(), key=str.casefold)
@@ -538,6 +498,9 @@ def multitotp_continuous(
     :raises KILLED: _description_
     """
     init(timeservers)
+    if _use_tui():
+        run_tui(secrets=secrets, showsecrets=showsecrets, showerr=showerr, timelimit=float(timelimit), filterterm=filterterm, exact=exact)
+        return
     tstart = time.time()
     remaining = RemainingTime()
     try:
