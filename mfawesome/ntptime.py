@@ -307,6 +307,11 @@ def PooledNTPTime(pool: int | list | set | tuple = 10, timeout: float = 1.0):
     return results
 
 
+# Maximum disagreement between NTP servers, in seconds, before the pool is
+# considered untrustworthy. TOTP uses 30 s windows so 1 s is already generous.
+MAX_OFFSET_SPREAD = 1.0
+
+
 def systime_offset(pool: int | list | set | tuple = 10, timeout: float = 1.0):
     ntptimes = PooledNTPTime(pool, timeout)
     offsets = [x.offset for x in ntptimes if isinstance(x, NTPTimestamp)]
@@ -315,13 +320,16 @@ def systime_offset(pool: int | list | set | tuple = 10, timeout: float = 1.0):
         raise NTPError(f"No NTP server in the pool could be contacted.  Example Error: {failed[0]!r}")
     if len(offsets) == 1:
         return offsets[0]
-    stdev = statistics.stdev(offsets)
-    mean = statistics.mean(offsets)
-    percent_stdev = (stdev / mean) * 100
-    if percent_stdev > 300:
-        raise NTPError(f"Standard deviation is {percent_stdev:.3f}% of mean - one or more time servers may be inaccurate")
-    return -mean
-    return -mean
+    # Offsets are centred on zero when the system clock is correct, so a
+    # stdev-as-percent-of-mean check blows up precisely when the clock is
+    # accurate. Use an absolute spread instead: if the servers disagree with
+    # each other by more than MAX_OFFSET_SPREAD seconds, one of them is bad.
+    spread = max(offsets) - min(offsets)
+    if spread > MAX_OFFSET_SPREAD:
+        raise NTPError(
+            f"Time servers disagree by {spread:.3f}s (max allowed {MAX_OFFSET_SPREAD}s) - one or more time servers may be inaccurate"
+        )
+    return -statistics.mean(offsets)
 
 
 def timestamp(pool: int | list | set | tuple = 10, timeout: float = 1.0):
